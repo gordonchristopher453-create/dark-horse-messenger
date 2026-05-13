@@ -14,31 +14,14 @@ const Sidebar = () => {
   const dispatch = useDispatch()
   const { chats, activeChat } = useSelector(state => state.chat)
   const { user } = useSelector(state => state.auth)
-  const { messages } = useSelector(state => state.message)
   const [searchOpen, setSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [unreadCounts, setUnreadCounts] = useState({})
-
-  useEffect(() => {
-    const counts = {}
-    chats.forEach(chat => {
-      const chatMessages = messages[chat._id] || []
-      const unread = chatMessages.filter(msg => {
-        const isOwn = msg.sender?._id === user?._id || msg.sender === user?._id
-        const isRead = msg.readBy?.some(r => r.user === user?._id || r.user?._id === user?._id)
-        return !isOwn && !isRead && !msg.isDeleted
-      }).length
-      counts[chat._id] = unread
-    })
-    setUnreadCounts(counts)
-  }, [messages, chats, user])
 
   const handleChatClick = (chat) => {
     dispatch(setActiveChat(chat))
     dispatch(fetchMessages({ chatId: chat._id }))
     const socket = getSocket()
     if (socket) socket.emit('chat:join', chat._id)
-    setUnreadCounts(prev => ({ ...prev, [chat._id]: 0 }))
   }
 
   const getChatName = (chat) => {
@@ -71,7 +54,7 @@ const Sidebar = () => {
     return chat.lastMessage.content || ''
   }
 
-  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0)
+  const totalUnread = chats.reduce((a, c) => a + (c.unreadCount || 0), 0)
 
   useEffect(() => {
     document.title = totalUnread > 0
@@ -160,7 +143,7 @@ const Sidebar = () => {
           </div>
         ) : (
           chats.map(chat => {
-            const unread = unreadCounts[chat._id] || 0
+            const unread = chat.unreadCount || 0
             return (
               <div key={chat._id} onClick={() => handleChatClick(chat)}
                 style={{
@@ -178,14 +161,18 @@ const Sidebar = () => {
                     alignItems: 'center', marginBottom: '3px'
                   }}>
                     <p style={{
-                      fontWeight: unread > 0 ? 700 : 600, fontSize: '14px',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                      fontWeight: unread > 0 ? 700 : 600,
+                      fontSize: '14px', overflow: 'hidden',
+                      textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                     }}>
                       {getChatName(chat)}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       {chat.lastMessage && (
-                        <span style={{ color: unread > 0 ? 'var(--accent-light)' : 'var(--text-muted)', fontSize: '11px' }}>
+                        <span style={{
+                          color: unread > 0 ? 'var(--accent-light)' : 'var(--text-muted)',
+                          fontSize: '11px'
+                        }}>
                           {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: false })}
                         </span>
                       )}
