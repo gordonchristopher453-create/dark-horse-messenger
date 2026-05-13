@@ -37,16 +37,27 @@ const chatSlice = createSlice({
     error: null
   },
   reducers: {
-    setActiveChat: (state, action) => { state.activeChat = action.payload },
+    setActiveChat: (state, action) => {
+      state.activeChat = action.payload
+    },
     updateChatLastMessage: (state, action) => {
       const { chatId, message } = action.payload
       const chat = state.chats.find(c => c._id === chatId)
-      if (chat) chat.lastMessage = message
+      if (chat) {
+        chat.lastMessage = message
+        chat.updatedAt = new Date().toISOString()
+      }
+      // Sort chats by latest message
       state.chats.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
     },
     addChat: (state, action) => {
       const exists = state.chats.find(c => c._id === action.payload._id)
       if (!exists) state.chats.unshift(action.payload)
+    },
+    updateActiveChat: (state, action) => {
+      if (state.activeChat?._id === action.payload._id) {
+        state.activeChat = action.payload
+      }
     }
   },
   extraReducers: (builder) => {
@@ -54,6 +65,11 @@ const chatSlice = createSlice({
     builder.addCase(fetchChats.fulfilled, (state, action) => {
       state.loading = false
       state.chats = action.payload
+      // Update active chat if it exists in new data
+      if (state.activeChat) {
+        const updated = action.payload.find(c => c._id === state.activeChat._id)
+        if (updated) state.activeChat = updated
+      }
     })
     builder.addCase(fetchChats.rejected, (state) => { state.loading = false })
     builder.addCase(getOrCreateDirectChat.fulfilled, (state, action) => {
@@ -68,5 +84,5 @@ const chatSlice = createSlice({
   }
 })
 
-export const { setActiveChat, updateChatLastMessage, addChat } = chatSlice.actions
+export const { setActiveChat, updateChatLastMessage, addChat, updateActiveChat } = chatSlice.actions
 export default chatSlice.reducer

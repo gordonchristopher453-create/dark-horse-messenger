@@ -1,9 +1,8 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchChats } from '../store/slices/chatSlice'
+import { fetchChats, updateChatLastMessage, addChat } from '../store/slices/chatSlice'
 import { getSocket } from '../services/socket'
 import { addMessage } from '../store/slices/messageSlice'
-import { updateChatLastMessage } from '../store/slices/chatSlice'
 import { setTypingUser } from '../store/slices/uiSlice'
 import Sidebar from '../components/chat/Sidebar'
 import ChatWindow from '../components/chat/ChatWindow'
@@ -14,18 +13,27 @@ const ChatPage = () => {
   const { activeChat } = useSelector(state => state.chat)
 
   useEffect(() => {
+    // Load chats on mount
     dispatch(fetchChats())
+
+    // Auto refresh chats every 30 seconds
+    const interval = setInterval(() => {
+      dispatch(fetchChats())
+    }, 30000)
+
+    return () => clearInterval(interval)
   }, [])
 
-  // Socket event listeners
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
 
-    // Receive message
+    // Receive new message
     socket.on('message:receive', ({ message, chatId }) => {
       dispatch(addMessage({ chatId, message }))
       dispatch(updateChatLastMessage({ chatId, message }))
+      // Refresh chat list to update order
+      dispatch(fetchChats())
     })
 
     // Typing indicators
@@ -37,18 +45,23 @@ const ChatPage = () => {
       dispatch(setTypingUser({ chatId, userId, isTyping: false }))
     })
 
+    // New chat created
+    socket.on('chat:new', (chat) => {
+      dispatch(addChat(chat))
+    })
+
     return () => {
       socket.off('message:receive')
       socket.off('typing:start')
       socket.off('typing:stop')
+      socket.off('chat:new')
     }
   }, [])
 
   return (
     <div style={{
       display: 'flex', height: '100vh',
-      background: 'var(--bg-primary)',
-      overflow: 'hidden'
+      background: 'var(--bg-primary)', overflow: 'hidden'
     }}>
       <Sidebar />
       {activeChat ? <ChatWindow /> : <WelcomeScreen />}
