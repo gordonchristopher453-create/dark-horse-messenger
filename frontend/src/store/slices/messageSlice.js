@@ -21,15 +21,12 @@ export const sendMessage = createAsyncThunk('message/sendMessage', async ({ chat
 
 const messageSlice = createSlice({
   name: 'message',
-  initialState: {
-    messages: {},
-    loading: false,
-    error: null
-  },
+  initialState: { messages: {}, loading: false, error: null },
   reducers: {
     addMessage: (state, action) => {
       const { chatId, message } = action.payload
       if (!state.messages[chatId]) state.messages[chatId] = []
+      // Strict duplicate check by ID
       const exists = state.messages[chatId].find(m => m._id === message._id)
       if (!exists) state.messages[chatId].push(message)
     },
@@ -44,15 +41,10 @@ const messageSlice = createSlice({
       const { chatId, messageId } = action.payload
       if (state.messages[chatId]) {
         const msg = state.messages[chatId].find(m => m._id === messageId)
-        if (msg) {
-          msg.isDeleted = true
-          msg.content = 'This message was deleted'
-        }
+        if (msg) { msg.isDeleted = true; msg.content = 'This message was deleted' }
       }
     },
-    clearMessages: (state, action) => {
-      delete state.messages[action.payload]
-    }
+    clearMessages: (state, action) => { delete state.messages[action.payload] }
   },
   extraReducers: (builder) => {
     builder.addCase(fetchMessages.pending, (state) => { state.loading = true })
