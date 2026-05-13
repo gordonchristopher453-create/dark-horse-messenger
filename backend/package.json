@@ -1,0 +1,14 @@
+{
+  "name": "dark-horse-messenger-backend",
+  "version": "1.0.0",
+  "description": "Dark Horse Messenger - Backend API Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

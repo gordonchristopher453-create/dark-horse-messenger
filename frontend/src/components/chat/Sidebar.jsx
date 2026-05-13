@@ -1,0 +1,205 @@
+import { useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { setActiveChat } from '../../store/slices/chatSlice'
+import { logout } from '../../store/slices/authSlice'
+import { fetchMessages } from '../../store/slices/messageSlice'
+import { getSocket } from '../../services/socket'
+import Avatar from '../ui/Avatar'
+import SearchUsers from './SearchUsers'
+import { FiSearch, FiLogOut, FiEdit, FiMessageSquare } from 'react-icons/fi'
+import { formatDistanceToNow } from 'date-fns'
+
+const Sidebar = () => {
+  const dispatch = useDispatch()
+  const { chats, activeChat } = useSelector(state => state.chat)
+  const { user } = useSelector(state => state.auth)
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  const handleChatClick = (chat) => {
+    dispatch(setActiveChat(chat))
+    dispatch(fetchMessages({ chatId: chat._id }))
+    const socket = getSocket()
+    if (socket) socket.emit('chat:join', chat._id)
+  }
+
+  const getChatName = (chat) => {
+    if (chat.isGroup) return chat.groupName
+    const other = chat.members?.find(m => m._id !== user?._id)
+    return other?.displayName || 'Unknown'
+  }
+
+  const getChatAvatar = (chat) => {
+    if (chat.isGroup) return chat.groupImage
+    const other = chat.members?.find(m => m._id !== user?._id)
+    return other?.avatar
+  }
+
+  const isOnline = (chat) => {
+    if (chat.isGroup) return false
+    const other = chat.members?.find(m => m._id !== user?._id)
+    return other?.isOnline
+  }
+
+  const getLastMessage = (chat) => {
+    if (!chat.lastMessage) return 'No messages yet'
+    if (chat.lastMessage.isDeleted) return '🚫 Message deleted'
+    if (chat.lastMessage.type === 'image') return '📷 Image'
+    if (chat.lastMessage.type === 'audio') return '🎵 Voice note'
+    if (chat.lastMessage.type === 'video') return '🎥 Video'
+    if (chat.lastMessage.type === 'document') return '📄 Document'
+    if (chat.lastMessage.type === 'system') return chat.lastMessage.content
+    return chat.lastMessage.content || ''
+  }
+
+  return (
+    <div style={{
+      width: '340px', height: '100vh',
+      background: 'var(--bg-secondary)',
+      borderRight: '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column',
+      flexShrink: 0
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '16px 20px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Avatar src={user?.avatar} name={user?.displayName} size={38} online />
+          <div>
+            <p style={{ fontWeight: 600, fontSize: '15px' }}>{user?.displayName}</p>
+            <p style={{ color: 'var(--success)', fontSize: '11px' }}>Online</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => setSearchOpen(true)}
+            style={{
+              background: 'var(--bg-tertiary)', border: 'none',
+              color: 'var(--text-secondary)', padding: '8px',
+              borderRadius: '10px', fontSize: '16px',
+              display: 'flex', alignItems: 'center'
+            }}>
+            <FiEdit />
+          </button>
+          <button onClick={() => dispatch(logout())}
+            style={{
+              background: 'var(--bg-tertiary)', border: 'none',
+              color: 'var(--text-secondary)', padding: '8px',
+              borderRadius: '10px', fontSize: '16px',
+              display: 'flex', alignItems: 'center'
+            }}>
+            <FiLogOut />
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ padding: '12px 16px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          background: 'var(--bg-tertiary)', borderRadius: '12px',
+          padding: '8px 14px', border: '1px solid var(--border)'
+        }}>
+          <FiSearch style={{ color: 'var(--text-muted)', fontSize: '15px' }} />
+          <input
+            placeholder="Search chats..."
+            readOnly
+            onClick={() => setSearchOpen(true)}
+            style={{
+              background: 'transparent', border: 'none',
+              color: 'var(--text-primary)', fontSize: '14px',
+              width: '100%', cursor: 'pointer'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Chat List */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {chats.length === 0 ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            height: '200px', gap: '12px'
+          }}>
+            <FiMessageSquare style={{ fontSize: '32px', color: 'var(--text-muted)' }} />
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+              No chats yet
+            </p>
+            <button onClick={() => setSearchOpen(true)}
+              style={{
+                background: 'var(--accent)', color: '#fff',
+                border: 'none', borderRadius: '10px',
+                padding: '8px 16px', fontSize: '13px', fontWeight: 600
+              }}>
+              Start a chat
+            </button>
+          </div>
+        ) : (
+          chats.map(chat => (
+            <div key={chat._id}
+              onClick={() => handleChatClick(chat)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '12px 16px', cursor: 'pointer',
+                background: activeChat?._id === chat._id
+                  ? 'var(--bg-hover)' : 'transparent',
+                borderLeft: activeChat?._id === chat._id
+                  ? '3px solid var(--accent)' : '3px solid transparent',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => {
+                if (activeChat?._id !== chat._id)
+                  e.currentTarget.style.background = 'var(--bg-tertiary)'
+              }}
+              onMouseLeave={e => {
+                if (activeChat?._id !== chat._id)
+                  e.currentTarget.style.background = 'transparent'
+              }}
+            >
+              <Avatar
+                src={getChatAvatar(chat)}
+                name={getChatName(chat)}
+                size={46}
+                online={isOnline(chat)}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', marginBottom: '3px'
+                }}>
+                  <p style={{
+                    fontWeight: 600, fontSize: '14px',
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {getChatName(chat)}
+                  </p>
+                  {chat.lastMessage && (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '11px', flexShrink: 0 }}>
+                      {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: false })}
+                    </span>
+                  )}
+                </div>
+                <p style={{
+                  color: 'var(--text-muted)', fontSize: '13px',
+                  overflow: 'hidden', textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {getLastMessage(chat)}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Search Modal */}
+      {searchOpen && <SearchUsers onClose={() => setSearchOpen(false)} />}
+    </div>
+  )
+}
+
+export default Sidebar
