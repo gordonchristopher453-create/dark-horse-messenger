@@ -19,7 +19,6 @@ const Sidebar = () => {
   const [profileOpen, setProfileOpen] = useState(false)
   const [unreadCounts, setUnreadCounts] = useState({})
 
-  // Calculate unread messages for each chat
   useEffect(() => {
     const counts = {}
     chats.forEach(chat => {
@@ -39,7 +38,6 @@ const Sidebar = () => {
     dispatch(fetchMessages({ chatId: chat._id }))
     const socket = getSocket()
     if (socket) socket.emit('chat:join', chat._id)
-    // Clear unread count for this chat
     setUnreadCounts(prev => ({ ...prev, [chat._id]: 0 }))
   }
 
@@ -63,16 +61,16 @@ const Sidebar = () => {
 
   const getLastMessage = (chat) => {
     if (!chat.lastMessage) return 'No messages yet'
-    if (chat.lastMessage.isDeleted) return '🚫 Message deleted'
+    if (chat.lastMessage.isDeleted) return 'Message deleted'
     if (chat.lastMessage.type === 'image') return '📷 Image'
     if (chat.lastMessage.type === 'audio') return '🎵 Voice note'
+    if (chat.lastMessage.type === 'voice') return '🎤 Voice note'
     if (chat.lastMessage.type === 'video') return '🎥 Video'
     if (chat.lastMessage.type === 'document') return '📄 Document'
     if (chat.lastMessage.type === 'system') return chat.lastMessage.content
     return chat.lastMessage.content || ''
   }
 
-  // Total unread count for page title
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0)
 
   useEffect(() => {
@@ -95,10 +93,8 @@ const Sidebar = () => {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        <div
-          onClick={() => setProfileOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
-        >
+        <div onClick={() => setProfileOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
           <Avatar src={user?.avatar} name={user?.displayName} size={38} online />
           <div>
             <p style={{ fontWeight: 600, fontSize: '15px' }}>{user?.displayName}</p>
@@ -133,9 +129,7 @@ const Sidebar = () => {
           padding: '8px 14px', border: '1px solid var(--border)'
         }}>
           <FiSearch style={{ color: 'var(--text-muted)', fontSize: '15px' }} />
-          <input
-            placeholder="Search chats..."
-            readOnly
+          <input placeholder="Search chats..." readOnly
             onClick={() => setSearchOpen(true)}
             style={{
               background: 'transparent', border: 'none',
@@ -157,3 +151,75 @@ const Sidebar = () => {
             <FiMessageSquare style={{ fontSize: '32px', color: 'var(--text-muted)' }} />
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No chats yet</p>
             <button onClick={() => setSearchOpen(true)} style={{
+              background: 'var(--accent)', color: '#fff',
+              border: 'none', borderRadius: '10px',
+              padding: '8px 16px', fontSize: '13px', fontWeight: 600
+            }}>
+              Start a chat
+            </button>
+          </div>
+        ) : (
+          chats.map(chat => {
+            const unread = unreadCounts[chat._id] || 0
+            return (
+              <div key={chat._id} onClick={() => handleChatClick(chat)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '12px 16px', cursor: 'pointer',
+                  background: activeChat?._id === chat._id ? 'var(--bg-hover)' : 'transparent',
+                  borderLeft: activeChat?._id === chat._id ? '3px solid var(--accent)' : '3px solid transparent',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Avatar src={getChatAvatar(chat)} name={getChatName(chat)} size={46} online={isOnline(chat)} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', marginBottom: '3px'
+                  }}>
+                    <p style={{
+                      fontWeight: unread > 0 ? 700 : 600, fontSize: '14px',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                    }}>
+                      {getChatName(chat)}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      {chat.lastMessage && (
+                        <span style={{ color: unread > 0 ? 'var(--accent-light)' : 'var(--text-muted)', fontSize: '11px' }}>
+                          {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: false })}
+                        </span>
+                      )}
+                      {unread > 0 && (
+                        <div style={{
+                          background: 'var(--accent)', color: '#fff',
+                          borderRadius: '50%', minWidth: '20px', height: '20px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '11px', fontWeight: 700, padding: '0 4px'
+                        }}>
+                          {unread > 99 ? '99+' : unread}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <p style={{
+                    color: unread > 0 ? 'var(--text-secondary)' : 'var(--text-muted)',
+                    fontSize: '13px', overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    fontWeight: unread > 0 ? 500 : 400
+                  }}>
+                    {getLastMessage(chat)}
+                  </p>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {searchOpen && <SearchUsers onClose={() => setSearchOpen(false)} />}
+      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+    </div>
+  )
+}
+
+export default Sidebar
