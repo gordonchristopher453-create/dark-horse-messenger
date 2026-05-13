@@ -6,6 +6,7 @@ import { fetchMessages } from '../../store/slices/messageSlice'
 import { getSocket } from '../../services/socket'
 import Avatar from '../ui/Avatar'
 import SearchUsers from './SearchUsers'
+import ProfileModal from '../profile/ProfileModal'
 import { FiSearch, FiLogOut, FiEdit, FiMessageSquare } from 'react-icons/fi'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -14,6 +15,7 @@ const Sidebar = () => {
   const { chats, activeChat } = useSelector(state => state.chat)
   const { user } = useSelector(state => state.auth)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const handleChatClick = (chat) => {
     dispatch(setActiveChat(chat))
@@ -56,8 +58,7 @@ const Sidebar = () => {
       width: '340px', height: '100vh',
       background: 'var(--bg-secondary)',
       borderRight: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column',
-      flexShrink: 0
+      display: 'flex', flexDirection: 'column', flexShrink: 0
     }}>
       {/* Header */}
       <div style={{
@@ -66,30 +67,33 @@ const Sidebar = () => {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Avatar - tap to open profile */}
+        <div
+          onClick={() => setProfileOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+        >
           <Avatar src={user?.avatar} name={user?.displayName} size={38} online />
           <div>
             <p style={{ fontWeight: 600, fontSize: '15px' }}>{user?.displayName}</p>
             <p style={{ color: 'var(--success)', fontSize: '11px' }}>Online</p>
           </div>
         </div>
+
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setSearchOpen(true)}
-            style={{
-              background: 'var(--bg-tertiary)', border: 'none',
-              color: 'var(--text-secondary)', padding: '8px',
-              borderRadius: '10px', fontSize: '16px',
-              display: 'flex', alignItems: 'center'
-            }}>
+          <button onClick={() => setSearchOpen(true)} style={{
+            background: 'var(--bg-tertiary)', border: 'none',
+            color: 'var(--text-secondary)', padding: '8px',
+            borderRadius: '10px', fontSize: '16px',
+            display: 'flex', alignItems: 'center'
+          }}>
             <FiEdit />
           </button>
-          <button onClick={() => dispatch(logout())}
-            style={{
-              background: 'var(--bg-tertiary)', border: 'none',
-              color: 'var(--text-secondary)', padding: '8px',
-              borderRadius: '10px', fontSize: '16px',
-              display: 'flex', alignItems: 'center'
-            }}>
+          <button onClick={() => dispatch(logout())} style={{
+            background: 'var(--bg-tertiary)', border: 'none',
+            color: 'var(--text-secondary)', padding: '8px',
+            borderRadius: '10px', fontSize: '16px',
+            display: 'flex', alignItems: 'center'
+          }}>
             <FiLogOut />
           </button>
         </div>
@@ -125,15 +129,12 @@ const Sidebar = () => {
             height: '200px', gap: '12px'
           }}>
             <FiMessageSquare style={{ fontSize: '32px', color: 'var(--text-muted)' }} />
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-              No chats yet
-            </p>
-            <button onClick={() => setSearchOpen(true)}
-              style={{
-                background: 'var(--accent)', color: '#fff',
-                border: 'none', borderRadius: '10px',
-                padding: '8px 16px', fontSize: '13px', fontWeight: 600
-              }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No chats yet</p>
+            <button onClick={() => setSearchOpen(true)} style={{
+              background: 'var(--accent)', color: '#fff',
+              border: 'none', borderRadius: '10px',
+              padding: '8px 16px', fontSize: '13px', fontWeight: 600
+            }}>
               Start a chat
             </button>
           </div>
@@ -144,37 +145,15 @@ const Sidebar = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: '12px 16px', cursor: 'pointer',
-                background: activeChat?._id === chat._id
-                  ? 'var(--bg-hover)' : 'transparent',
-                borderLeft: activeChat?._id === chat._id
-                  ? '3px solid var(--accent)' : '3px solid transparent',
+                background: activeChat?._id === chat._id ? 'var(--bg-hover)' : 'transparent',
+                borderLeft: activeChat?._id === chat._id ? '3px solid var(--accent)' : '3px solid transparent',
                 transition: 'all 0.15s ease'
               }}
-              onMouseEnter={e => {
-                if (activeChat?._id !== chat._id)
-                  e.currentTarget.style.background = 'var(--bg-tertiary)'
-              }}
-              onMouseLeave={e => {
-                if (activeChat?._id !== chat._id)
-                  e.currentTarget.style.background = 'transparent'
-              }}
             >
-              <Avatar
-                src={getChatAvatar(chat)}
-                name={getChatName(chat)}
-                size={46}
-                online={isOnline(chat)}
-              />
+              <Avatar src={getChatAvatar(chat)} name={getChatName(chat)} size={46} online={isOnline(chat)} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center', marginBottom: '3px'
-                }}>
-                  <p style={{
-                    fontWeight: 600, fontSize: '14px',
-                    overflow: 'hidden', textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                  <p style={{ fontWeight: 600, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {getChatName(chat)}
                   </p>
                   {chat.lastMessage && (
@@ -183,11 +162,7 @@ const Sidebar = () => {
                     </span>
                   )}
                 </div>
-                <p style={{
-                  color: 'var(--text-muted)', fontSize: '13px',
-                  overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {getLastMessage(chat)}
                 </p>
               </div>
@@ -196,8 +171,8 @@ const Sidebar = () => {
         )}
       </div>
 
-      {/* Search Modal */}
       {searchOpen && <SearchUsers onClose={() => setSearchOpen(false)} />}
+      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
     </div>
   )
 }
