@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setActiveChat } from '../../store/slices/chatSlice'
 import { logout } from '../../store/slices/authSlice'
@@ -14,14 +14,33 @@ const Sidebar = () => {
   const dispatch = useDispatch()
   const { chats, activeChat } = useSelector(state => state.chat)
   const { user } = useSelector(state => state.auth)
+  const { messages } = useSelector(state => state.message)
   const [searchOpen, setSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [unreadCounts, setUnreadCounts] = useState({})
+
+  // Calculate unread messages for each chat
+  useEffect(() => {
+    const counts = {}
+    chats.forEach(chat => {
+      const chatMessages = messages[chat._id] || []
+      const unread = chatMessages.filter(msg => {
+        const isOwn = msg.sender?._id === user?._id || msg.sender === user?._id
+        const isRead = msg.readBy?.some(r => r.user === user?._id || r.user?._id === user?._id)
+        return !isOwn && !isRead && !msg.isDeleted
+      }).length
+      counts[chat._id] = unread
+    })
+    setUnreadCounts(counts)
+  }, [messages, chats, user])
 
   const handleChatClick = (chat) => {
     dispatch(setActiveChat(chat))
     dispatch(fetchMessages({ chatId: chat._id }))
     const socket = getSocket()
     if (socket) socket.emit('chat:join', chat._id)
+    // Clear unread count for this chat
+    setUnreadCounts(prev => ({ ...prev, [chat._id]: 0 }))
   }
 
   const getChatName = (chat) => {
@@ -53,6 +72,15 @@ const Sidebar = () => {
     return chat.lastMessage.content || ''
   }
 
+  // Total unread count for page title
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0)
+
+  useEffect(() => {
+    document.title = totalUnread > 0
+      ? `(${totalUnread}) Dark Horse Messenger`
+      : 'Dark Horse Messenger'
+  }, [totalUnread])
+
   return (
     <div style={{
       width: '340px', height: '100vh',
@@ -67,7 +95,6 @@ const Sidebar = () => {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        {/* Avatar - tap to open profile */}
         <div
           onClick={() => setProfileOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
@@ -78,7 +105,6 @@ const Sidebar = () => {
             <p style={{ color: 'var(--success)', fontSize: '11px' }}>Online</p>
           </div>
         </div>
-
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => setSearchOpen(true)} style={{
             background: 'var(--bg-tertiary)', border: 'none',
@@ -131,50 +157,3 @@ const Sidebar = () => {
             <FiMessageSquare style={{ fontSize: '32px', color: 'var(--text-muted)' }} />
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No chats yet</p>
             <button onClick={() => setSearchOpen(true)} style={{
-              background: 'var(--accent)', color: '#fff',
-              border: 'none', borderRadius: '10px',
-              padding: '8px 16px', fontSize: '13px', fontWeight: 600
-            }}>
-              Start a chat
-            </button>
-          </div>
-        ) : (
-          chats.map(chat => (
-            <div key={chat._id}
-              onClick={() => handleChatClick(chat)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '12px 16px', cursor: 'pointer',
-                background: activeChat?._id === chat._id ? 'var(--bg-hover)' : 'transparent',
-                borderLeft: activeChat?._id === chat._id ? '3px solid var(--accent)' : '3px solid transparent',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Avatar src={getChatAvatar(chat)} name={getChatName(chat)} size={46} online={isOnline(chat)} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                  <p style={{ fontWeight: 600, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {getChatName(chat)}
-                  </p>
-                  {chat.lastMessage && (
-                    <span style={{ color: 'var(--text-muted)', fontSize: '11px', flexShrink: 0 }}>
-                      {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: false })}
-                    </span>
-                  )}
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {getLastMessage(chat)}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {searchOpen && <SearchUsers onClose={() => setSearchOpen(false)} />}
-      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
-    </div>
-  )
-}
-
-export default Sidebar
