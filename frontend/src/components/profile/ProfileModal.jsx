@@ -6,6 +6,7 @@ import Avatar from '../ui/Avatar'
 import Button from '../ui/Button'
 import { FiX, FiCamera, FiUser, FiInfo } from 'react-icons/fi'
 import toast from 'react-hot-toast'
+import UserQRCode from './QRCode'
 
 const ProfileModal = ({ onClose }) => {
   const dispatch = useDispatch()
@@ -168,6 +169,8 @@ const ProfileModal = ({ onClose }) => {
             </p>
           </div>
 
+          <UserQRCode userId={user?._id} username={user?.username} />
+          <UserQRCode userId={user?._id} username={user?.username} />
           <Button fullWidth loading={loading} onClick={handleSave}>
             Save Changes
           </Button>
