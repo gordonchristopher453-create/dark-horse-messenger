@@ -23,3 +23,4 @@ Thumbs.db
 .vite/
 frontend/.vite/
 backend/config/firebase-service-account.json
+backend/logs/

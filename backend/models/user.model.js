@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { fieldEncryption } = require('mongoose-field-encryption');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -25,6 +26,7 @@ const userSchema = new mongoose.Schema({
   refreshToken: String,
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   fcmToken: { type: String, default: '' },
+  lastLoginIP: { type: String, default: '' },
   settings: {
     notifications: { type: Boolean, default: true },
     readReceipts: { type: Boolean, default: true },
@@ -32,6 +34,13 @@ const userSchema = new mongoose.Schema({
     theme: { type: String, default: 'dark' }
   }
 }, { timestamps: true });
+
+// Field encryption for sensitive data
+userSchema.plugin(fieldEncryption, {
+  fields: ['fcmToken'],
+  secret: process.env.DB_ENCRYPTION_SECRET || 'darkhorse_db_encryption_secret_32c',
+  saltGenerator: (secret) => secret.slice(0, 16)
+});
 
 userSchema.pre('save', async function() {
   if (!this.isModified('password')) return;
@@ -49,6 +58,8 @@ userSchema.methods.toJSON = function() {
   delete user.verificationToken;
   delete user.resetPasswordToken;
   delete user.refreshToken;
+  delete user.fcmToken;
+  delete user.lastLoginIP;
   return user;
 };
 

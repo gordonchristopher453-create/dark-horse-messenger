@@ -15,13 +15,14 @@ const messageRoutes = require('./routes/message.routes');
 const groupRoutes = require('./routes/group.routes');
 const { errorHandler, notFound } = require('./middleware/error.middleware');
 const initSocket = require('./sockets/socket.handler');
+const logger = require('./utils/logger');
 
 const app = express();
 const server = http.createServer(app);
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://dark-horse-frontend-three.vercel.app';
 
-// Initialize Socket.IO with locked CORS
+// Socket.IO
 const io = socketio(server, {
   cors: {
     origin: FRONTEND_URL,
@@ -30,22 +31,32 @@ const io = socketio(server, {
   }
 });
 
-// General rate limiter
+// Rate limiters
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: 'Too many requests, please try again later.'
 });
 
-// Auth rate limiter - stricter
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: 'Too many login attempts, please try again later.'
 });
 
-// Middleware
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// Security headers
+app.use(helmet());
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+    connectSrc: ["'self'", FRONTEND_URL, "https://dark-horse-messenger.onrender.com"],
+    fontSrc: ["'self'", "https://fonts.googleapis.com"],
+  }
+}));
+
 app.use(cors({
   origin: FRONTEND_URL,
   credentials: true,
@@ -53,10 +64,26 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.options('*', cors());
+
+// Logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api', limiter);
+
+// Audit logging middleware
+app.use((req, res, next) => {
+  if (req.path !== '/') {
+    logger.info({
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+  }
+  next();
+});
 
 // Health check
 app.get('/', (req, res) => {
@@ -75,14 +102,11 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/groups', groupRoutes);
 
-// Error handlers
 app.use(notFound);
 app.use(errorHandler);
 
-// Initialize sockets
 initSocket(io);
 
-// Connect DB then start server
 connectDB().then(() => {
   server.listen(process.env.PORT || 5000, () => {
     console.log('================================');
@@ -92,6 +116,7 @@ connectDB().then(() => {
     console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     console.log(`📡 Socket.IO : Active`);
     console.log(`🔒 CORS      : ${FRONTEND_URL}`);
+    console.log(`🛡️  Security  : Enhanced`);
     console.log('================================');
   });
 });
