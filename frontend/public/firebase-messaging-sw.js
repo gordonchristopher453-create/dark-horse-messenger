@@ -1,5 +1,5 @@
-importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js')
-importScripts('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js')
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js')
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js')
 
 firebase.initializeApp({
   apiKey: "AIzaSyA9dA2Rg09FxDGXRDzODpxabgFegbDnpBM",
@@ -12,14 +12,22 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging()
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('Background message:', payload)
-  const { title, body } = payload.notification
-  self.registration.showNotification(title, {
-    body,
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
+messaging.onBackgroundMessage(payload => {
+  console.log('📩 Background message:', payload)
+  const { title, body } = payload.notification || {}
+  self.registration.showNotification(title || 'Dark Horse Messenger', {
+    body: body || 'New message',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
     vibrate: [200, 100, 200],
-    data: payload.data
+    data: payload.data,
+    actions: [{ action: 'open', title: 'Open' }]
   })
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  event.waitUntil(
+    clients.openWindow('https://dark-horse-frontend-three.vercel.app')
+  )
 })
