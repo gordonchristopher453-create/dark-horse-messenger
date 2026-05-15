@@ -36,9 +36,13 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Field encryption for sensitive data
+const dbEncryptionSecret = process.env.DB_ENCRYPTION_SECRET;
+if (!dbEncryptionSecret && process.env.NODE_ENV === 'production') {
+  throw new Error('DB_ENCRYPTION_SECRET env var is required in production');
+}
 userSchema.plugin(fieldEncryption, {
   fields: ['fcmToken'],
-  secret: process.env.DB_ENCRYPTION_SECRET || 'darkhorse_db_encryption_secret_32c',
+  secret: dbEncryptionSecret || 'darkhorse_db_encryption_secret_32c',
   saltGenerator: (secret) => secret.slice(0, 16)
 });
 

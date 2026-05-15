@@ -48,7 +48,6 @@ const authLimiter = rateLimit({
 // Security headers
 app.set('trust proxy', 1)
 app.use(helmet());
-app.set('trust proxy', 1)
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],

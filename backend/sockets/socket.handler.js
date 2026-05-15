@@ -56,7 +56,7 @@ const initSocket = (io) => {
 
         if (!chat) return socket.emit('error', { message: 'Chat not found' });
 
-        // Only broadcast to others - don't create duplicate
+        // Primary path: REST already saved the message, just broadcast it
         if (messageId) {
           const message = await Message.findById(messageId)
             .populate('sender', 'username displayName avatar')
@@ -81,7 +81,24 @@ const initSocket = (io) => {
           return;
         }
 
-        // Fallback: create message if no messageId
+        // Fallback: only create if no duplicate exists in the last 3 seconds
+        const recentDuplicate = await Message.findOne({
+          sender: userId,
+          chat: chatId,
+          content: content || '',
+          type,
+          createdAt: { $gte: new Date(Date.now() - 3000) }
+        });
+
+        if (recentDuplicate) {
+          // Message already saved via REST — just broadcast it
+          const populated = await Message.findById(recentDuplicate._id)
+            .populate('sender', 'username displayName avatar')
+            .populate('replyTo');
+          socket.to(chatId).emit('message:receive', { message: populated, chatId });
+          return;
+        }
+
         let message = await Message.create({
           sender: userId, chat: chatId, type,
           content: content || '', replyTo: replyTo || null,

@@ -57,19 +57,19 @@ const setupNotifications = async () => {
     const { getMessaging, getToken, onMessage } = await import('firebase/messaging')
 
     const firebaseConfig = {
-      apiKey: "AIzaSyA9dA2Rg09FxDGXRDzODpxabgFegbDnpBM",
-      authDomain: "dark-horse-messenger-77525.firebaseapp.com",
-      projectId: "dark-horse-messenger-77525",
-      storageBucket: "dark-horse-messenger-77525.firebasestorage.app",
-      messagingSenderId: "925647798610",
-      appId: "1:925647798610:web:eaadef472e7f42db7d7a8b"
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID
     }
 
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
     const messaging = getMessaging(app)
 
     const token = await getToken(messaging, {
-      vapidKey: 'BE5qII9CWHu3S8lWwnyZNafZSJ7fxp2A2xjp0t-YxOZIIL8x4fgIKwIErTkE4IX-rLAIGam5diYuzsBTbkp0uOc',
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: registration
     })
 
