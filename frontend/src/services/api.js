@@ -5,7 +5,15 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://dark-horse-messenger.on
 const api = axios.create({
   baseURL: API_URL,
   timeout: 10000,
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
+  transformRequest: [(data, headers) => {
+    if (data instanceof FormData) {
+      delete headers['Content-Type']
+      return data
+    }
+    headers['Content-Type'] = 'application/json'
+    return JSON.stringify(data)
+  }]
 })
 
 api.interceptors.request.use(
