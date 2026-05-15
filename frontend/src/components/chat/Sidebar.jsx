@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setActiveChat } from '../../store/slices/chatSlice'
+import { setActiveChat, addChat } from '../../store/slices/chatSlice'
 import { logout } from '../../store/slices/authSlice'
 import { fetchMessages } from '../../store/slices/messageSlice'
 import { getSocket } from '../../services/socket'
@@ -8,7 +8,7 @@ import Avatar from '../ui/Avatar'
 import CreateGroupModal from '../group/CreateGroupModal'
 import SearchUsers from './SearchUsers'
 import ProfileModal from '../profile/ProfileModal'
-import { FiSearch, FiLogOut, FiEdit, FiMessageSquare } from 'react-icons/fi'
+import { FiSearch, FiLogOut, FiEdit, FiMessageSquare, FiUsers } from 'react-icons/fi'
 import { formatDistanceToNow } from 'date-fns'
 
 const Sidebar = () => {
@@ -17,12 +17,21 @@ const Sidebar = () => {
   const { user } = useSelector(state => state.auth)
   const [searchOpen, setSearchOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [groupOpen, setGroupOpen] = useState(false)
 
   const handleChatClick = (chat) => {
     dispatch(setActiveChat(chat))
     dispatch(fetchMessages({ chatId: chat._id }))
     const socket = getSocket()
     if (socket) socket.emit('chat:join', chat._id)
+  }
+
+  const handleGroupCreated = (group) => {
+    dispatch(addChat(group))
+    dispatch(setActiveChat(group))
+    dispatch(fetchMessages({ chatId: group._id }))
+    const socket = getSocket()
+    if (socket) socket.emit('chat:join', group._id)
   }
 
   const getChatName = (chat) => {
@@ -86,19 +95,27 @@ const Sidebar = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setSearchOpen(true)} style={{
+          <button onClick={() => setGroupOpen(true)} title="New Group" style={{
             background: 'var(--bg-tertiary)', border: 'none',
             color: 'var(--text-secondary)', padding: '8px',
             borderRadius: '10px', fontSize: '16px',
-            display: 'flex', alignItems: 'center'
+            display: 'flex', alignItems: 'center', cursor: 'pointer'
+          }}>
+            <FiUsers />
+          </button>
+          <button onClick={() => setSearchOpen(true)} title="New Chat" style={{
+            background: 'var(--bg-tertiary)', border: 'none',
+            color: 'var(--text-secondary)', padding: '8px',
+            borderRadius: '10px', fontSize: '16px',
+            display: 'flex', alignItems: 'center', cursor: 'pointer'
           }}>
             <FiEdit />
           </button>
-          <button onClick={() => dispatch(logout())} style={{
+          <button onClick={() => dispatch(logout())} title="Logout" style={{
             background: 'var(--bg-tertiary)', border: 'none',
             color: 'var(--text-secondary)', padding: '8px',
             borderRadius: '10px', fontSize: '16px',
-            display: 'flex', alignItems: 'center'
+            display: 'flex', alignItems: 'center', cursor: 'pointer'
           }}>
             <FiLogOut />
           </button>
@@ -137,7 +154,7 @@ const Sidebar = () => {
             <button onClick={() => setSearchOpen(true)} style={{
               background: 'var(--accent)', color: '#fff',
               border: 'none', borderRadius: '10px',
-              padding: '8px 16px', fontSize: '13px', fontWeight: 600
+              padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer'
             }}>
               Start a chat
             </button>
@@ -155,7 +172,20 @@ const Sidebar = () => {
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Avatar src={getChatAvatar(chat)} name={getChatName(chat)} size={46} online={isOnline(chat)} />
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <Avatar src={getChatAvatar(chat)} name={getChatName(chat)} size={46} online={isOnline(chat)} />
+                  {chat.isGroup && (
+                    <div style={{
+                      position: 'absolute', bottom: -2, right: -2,
+                      background: 'var(--accent)', borderRadius: '50%',
+                      width: '16px', height: '16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '9px', border: '2px solid var(--bg-secondary)'
+                    }}>
+                      <FiUsers color="#fff" size={8} />
+                    </div>
+                  )}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     display: 'flex', justifyContent: 'space-between',
@@ -206,6 +236,12 @@ const Sidebar = () => {
 
       {searchOpen && <SearchUsers onClose={() => setSearchOpen(false)} />}
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+      {groupOpen && (
+        <CreateGroupModal
+          onClose={() => setGroupOpen(false)}
+          onGroupCreated={handleGroupCreated}
+        />
+      )}
     </div>
   )
 }

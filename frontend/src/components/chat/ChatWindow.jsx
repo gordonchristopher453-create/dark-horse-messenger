@@ -6,7 +6,8 @@ import { getSocket } from '../../services/socket'
 import Avatar from '../ui/Avatar'
 import Message from './Message'
 import EmojiPicker from './EmojiPicker'
-import { FiSend, FiSmile, FiArrowLeft, FiX } from 'react-icons/fi'
+import { FiSend, FiSmile, FiArrowLeft, FiX, FiInfo } from 'react-icons/fi'
+import GroupInfoPanel from '../group/GroupInfoPanel'
 import { MdMic, MdAttachFile, MdStop } from 'react-icons/md'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
@@ -27,6 +28,7 @@ const ChatWindow = ({ onBack }) => {
   const [replyTo, setReplyTo] = useState(null)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [pendingMessages, setPendingMessages] = useState([])
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -249,12 +251,17 @@ const ChatWindow = ({ onBack }) => {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getChatName()}</p>
           <p style={{ fontSize: '12px', color: typingInChat.length > 0 ? 'var(--accent-light)' : isOtherOnline() ? 'var(--success)' : 'var(--text-muted)' }}>
-            {typingInChat.length > 0 ? 'typing...' : isOtherOnline() ? 'Online' : 'Offline'}
+            {typingInChat.length > 0 ? 'typing...' : activeChat && activeChat.isGroup ? (activeChat.members && activeChat.members.length || 0) + ' members' : isOtherOnline() ? 'Online' : 'Offline'}
           </p>
         </div>
+        {activeChat && activeChat.isGroup && (
+          <button onClick={() => setShowGroupInfo(true)} style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', padding: '8px', borderRadius: '10px', fontSize: '18px', display: 'flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <FiInfo />
+          </button>
+        )}
       </div>
 
-      {/* Messages */}
+      {/* Messages */
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}
         onClick={() => { showEmoji && setShowEmoji(false); showAttachMenu && setShowAttachMenu(false) }}>
         {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '14px' }}>Loading...</p>}
@@ -368,6 +375,9 @@ const ChatWindow = ({ onBack }) => {
             </button>
           )}
         </div>
+      )}
+      {showGroupInfo && activeChat && activeChat.isGroup && (
+        <GroupInfoPanel onClose={() => setShowGroupInfo(false)} />
       )}
     </div>
   )
