@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setActiveChat, addChat } from '../../store/slices/chatSlice'
+import { setActiveChat, addChat, clearUnread } from '../../store/slices/chatSlice'
 import { logout } from '../../store/slices/authSlice'
 import { fetchMessages } from '../../store/slices/messageSlice'
 import { getSocket } from '../../services/socket'
@@ -21,6 +21,7 @@ const Sidebar = () => {
 
   const handleChatClick = (chat) => {
     dispatch(setActiveChat(chat))
+    dispatch(clearUnread(chat._id))
     dispatch(fetchMessages({ chatId: chat._id }))
     const socket = getSocket()
     if (socket) socket.emit('chat:join', chat._id)

@@ -58,6 +58,10 @@ const chatSlice = createSlice({
       if (state.activeChat?._id === action.payload._id) {
         state.activeChat = action.payload
       }
+    },
+    clearUnread: (state, action) => {
+      const chat = state.chats.find(c => c._id === action.payload)
+      if (chat) chat.unreadCount = 0
     }
   },
   extraReducers: (builder) => {
@@ -84,5 +88,5 @@ const chatSlice = createSlice({
   }
 })
 
-export const { setActiveChat, updateChatLastMessage, addChat, updateActiveChat } = chatSlice.actions
+export const { setActiveChat, updateChatLastMessage, addChat, updateActiveChat, clearUnread } = chatSlice.actions
 export default chatSlice.reducer
