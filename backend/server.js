@@ -14,6 +14,7 @@ const chatRoutes = require('./routes/chat.routes');
 const messageRoutes = require('./routes/message.routes');
 const groupRoutes = require('./routes/group.routes');
 const { errorHandler, notFound } = require('./middleware/error.middleware');
+const keepAlive = require('./utils/keepAlive')
 const initSocket = require('./sockets/socket.handler');
 const logger = require('./utils/logger');
 
@@ -107,7 +108,8 @@ app.use('/api/groups', groupRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-initSocket(io);
+initSocket(io)
+if (process.env.NODE_ENV === 'production') keepAlive();
 
 connectDB().then(() => {
   server.listen(process.env.PORT || 5000, () => {
