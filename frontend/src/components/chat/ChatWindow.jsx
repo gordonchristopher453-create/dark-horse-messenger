@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchMessages, sendMessage } from '../../store/slices/messageSlice'
+import { fetchMessages, sendMessage, deleteMessage } from '../../store/slices/messageSlice'
 import { updateChatLastMessage } from '../../store/slices/chatSlice'
 import { getSocket } from '../../services/socket'
 import Avatar from '../ui/Avatar'
 import Message from './Message'
 import EmojiPicker from './EmojiPicker'
-import { FiSend, FiSmile, FiArrowLeft, FiX, FiCamera } from 'react-icons/fi'
-import { MdMic, MdAttachFile, MdStop, MdPhoto, MdVideoCall } from 'react-icons/md'
+import { FiSend, FiSmile, FiArrowLeft, FiX } from 'react-icons/fi'
+import { MdMic, MdAttachFile, MdStop } from 'react-icons/md'
+import api from '../../services/api'
 import toast from 'react-hot-toast'
 
 const ChatWindow = ({ onBack }) => {
@@ -23,6 +24,7 @@ const ChatWindow = ({ onBack }) => {
   const [uploading, setUploading] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showAttachMenu, setShowAttachMenu] = useState(false)
+  const [replyTo, setReplyTo] = useState(null)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [pendingMessages, setPendingMessages] = useState([])
   const messagesEndRef = useRef(null)
@@ -41,43 +43,33 @@ const ChatWindow = ({ onBack }) => {
   useEffect(() => {
     const handleOnline = async () => {
       setIsOnline(true)
-      toast.success('Back online!')
       const queue = JSON.parse(localStorage.getItem('messageQueue') || '[]')
       const chatQueue = queue.filter(m => m.chatId === activeChat?._id)
       for (const msg of chatQueue) {
         await dispatch(sendMessage({ chatId: msg.chatId, formData: { content: msg.content, type: 'text' } }))
       }
-      const remaining = queue.filter(m => m.chatId !== activeChat?._id)
-      localStorage.setItem('messageQueue', JSON.stringify(remaining))
+      localStorage.setItem('messageQueue', JSON.stringify(queue.filter(m => m.chatId !== activeChat?._id)))
       setPendingMessages([])
+      toast.success('Back online!')
     }
     const handleOffline = () => { setIsOnline(false); toast.error('You are offline') }
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline) }
   }, [activeChat?._id])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatMessages])
-
-  useEffect(() => {
-    if (activeChat?._id) dispatch(fetchMessages({ chatId: activeChat._id }))
-  }, [activeChat?._id])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chatMessages])
+  useEffect(() => { if (activeChat?._id) dispatch(fetchMessages({ chatId: activeChat._id })) }, [activeChat?._id])
 
   useEffect(() => {
     if (activeChat?._id) {
       const socket = getSocket()
       if (socket) {
-        const unreadIds = chatMessages
-          .filter(m => {
-            const isOwn = m.sender?._id === user?._id || m.sender === user?._id
-            const isRead = m.readBy?.some(r => r.user === user?._id || r.user?._id === user?._id)
-            return !isOwn && !isRead
-          }).map(m => m._id)
+        const unreadIds = chatMessages.filter(m => {
+          const isOwn = m.sender?._id === user?._id || m.sender === user?._id
+          const isRead = m.readBy?.some(r => r.user === user?._id || r.user?._id === user?._id)
+          return !isOwn && !isRead
+        }).map(m => m._id)
         if (unreadIds.length > 0) socket.emit('message:read', { chatId: activeChat._id, messageIds: unreadIds })
       }
     }
@@ -86,43 +78,30 @@ const ChatWindow = ({ onBack }) => {
   const getChatName = () => {
     if (!activeChat) return ''
     if (activeChat.isGroup) return activeChat.groupName
-    const other = activeChat.members?.find(m => m._id !== user?._id)
-    return other?.displayName || 'Unknown'
+    return activeChat.members?.find(m => m._id !== user?._id)?.displayName || 'Unknown'
   }
 
   const getChatAvatar = () => {
     if (!activeChat) return ''
     if (activeChat.isGroup) return activeChat.groupImage
-    const other = activeChat.members?.find(m => m._id !== user?._id)
-    return other?.avatar
+    return activeChat.members?.find(m => m._id !== user?._id)?.avatar
   }
 
   const isOtherOnline = () => {
     if (!activeChat || activeChat.isGroup) return false
-    const other = activeChat.members?.find(m => m._id !== user?._id)
-    return other?.isOnline
+    return activeChat.members?.find(m => m._id !== user?._id)?.isOnline
   }
 
   const handleTyping = (e) => {
     setText(e.target.value)
     const socket = getSocket()
     if (!socket) return
-    if (!isTyping) {
-      setIsTyping(true)
-      socket.emit('typing:start', { chatId: activeChat._id })
-    }
+    if (!isTyping) { setIsTyping(true); socket.emit('typing:start', { chatId: activeChat._id }) }
     clearTimeout(typingTimeoutRef.current)
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false)
-      socket.emit('typing:stop', { chatId: activeChat._id })
-    }, 1500)
+    typingTimeoutRef.current = setTimeout(() => { setIsTyping(false); socket.emit('typing:stop', { chatId: activeChat._id }) }, 1500)
   }
 
-  const handleEmojiClick = (emoji) => {
-    setText(prev => prev + emoji)
-    setShowEmoji(false)
-    textareaRef.current?.focus()
-  }
+  const handleEmojiClick = (emoji) => { setText(prev => prev + emoji); setShowEmoji(false); textareaRef.current?.focus() }
 
   const handleSend = async () => {
     if (!text.trim()) return
@@ -130,35 +109,47 @@ const ChatWindow = ({ onBack }) => {
     if (socket) socket.emit('typing:stop', { chatId: activeChat._id })
     setIsTyping(false)
     const messageText = text.trim()
+    const replyToId = replyTo?._id
     setText('')
+    setReplyTo(null)
     setShowEmoji(false)
 
     if (!navigator.onLine) {
       const queue = JSON.parse(localStorage.getItem('messageQueue') || '[]')
-      const pendingMsg = { chatId: activeChat._id, content: messageText, timestamp: Date.now(), id: Date.now() }
-      queue.push(pendingMsg)
+      const msg = { chatId: activeChat._id, content: messageText, timestamp: Date.now(), id: Date.now() }
+      queue.push(msg)
       localStorage.setItem('messageQueue', JSON.stringify(queue))
-      setPendingMessages(prev => [...prev, pendingMsg])
+      setPendingMessages(prev => [...prev, msg])
       toast('Message queued', { icon: '⏳' })
       return
     }
 
     const result = await dispatch(sendMessage({
       chatId: activeChat._id,
-      formData: { content: messageText, type: 'text' }
+      formData: { content: messageText, type: 'text', replyTo: replyToId }
     }))
     if (result.payload) {
       dispatch(updateChatLastMessage({ chatId: activeChat._id, message: result.payload }))
-      const socket = getSocket()
-      if (socket) socket.emit('message:send', {
-        chatId: activeChat._id, content: messageText,
-        type: 'text', messageId: result.payload._id
-      })
+      if (socket) socket.emit('message:send', { chatId: activeChat._id, content: messageText, type: 'text', messageId: result.payload._id })
     }
   }
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  const handleKeyPress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }
+
+  const handleDeleteMessage = async (messageId, deleteFor) => {
+    try {
+      await api.delete(`/messages/${messageId}?deleteFor=${deleteFor}`)
+      dispatch(deleteMessage({ chatId: activeChat._id, messageId }))
+      const socket = getSocket()
+      if (socket && deleteFor === 'everyone') {
+        socket.emit('message:delete', { messageId, chatId: activeChat._id, deleteFor: 'everyone' })
+      }
+      toast.success('Message deleted')
+    } catch { toast.error('Failed to delete message') }
+  }
+
+  const handleForward = (message) => {
+    toast('Forward feature coming soon!', { icon: '📨' })
   }
 
   const uploadFile = async (file, type) => {
@@ -175,9 +166,9 @@ const ChatWindow = ({ onBack }) => {
         dispatch(updateChatLastMessage({ chatId: activeChat._id, message: result.payload }))
         const socket = getSocket()
         if (socket) socket.emit('message:send', { chatId: activeChat._id, type, messageId: result.payload._id })
-        toast.success(`${type === 'image' ? 'Photo' : type === 'video' ? 'Video' : 'File'} sent!`)
+        toast.success('Sent!')
       }
-    } catch { toast.error('Failed to send file') }
+    } catch { toast.error('Failed to send') }
     finally { setUploading(false) }
   }
 
@@ -230,10 +221,8 @@ const ChatWindow = ({ onBack }) => {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop()
-      setRecording(false)
-      clearInterval(recordingTimerRef.current)
-      setRecordingTime(0)
+      mediaRecorderRef.current.stop(); setRecording(false)
+      clearInterval(recordingTimerRef.current); setRecordingTime(0)
     }
   }
 
@@ -242,9 +231,7 @@ const ChatWindow = ({ onBack }) => {
       mediaRecorderRef.current.ondataavailable = null
       mediaRecorderRef.current.onstop = null
       mediaRecorderRef.current.stop()
-      setRecording(false)
-      clearInterval(recordingTimerRef.current)
-      setRecordingTime(0)
+      setRecording(false); clearInterval(recordingTimerRef.current); setRecordingTime(0)
       audioChunksRef.current = []
     }
   }
@@ -253,20 +240,11 @@ const ChatWindow = ({ onBack }) => {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden', position: 'relative' }}>
-
-      {!isOnline && (
-        <div style={{ background: '#f59e0b', color: '#000', padding: '6px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
-          ⚠️ You are offline
-        </div>
-      )}
+      {!isOnline && <div style={{ background: '#f59e0b', color: '#000', padding: '6px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>⚠️ You are offline</div>}
 
       {/* Header */}
       <div style={{ padding: '12px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-        {onBack && (
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '22px', display: 'flex', alignItems: 'center', padding: '4px', cursor: 'pointer', flexShrink: 0 }}>
-            <FiArrowLeft />
-          </button>
-        )}
+        {onBack && <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '22px', display: 'flex', alignItems: 'center', padding: '4px', cursor: 'pointer', flexShrink: 0 }}><FiArrowLeft /></button>}
         <Avatar src={getChatAvatar()} name={getChatName()} size={40} online={isOtherOnline()} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getChatName()}</p>
@@ -280,7 +258,7 @@ const ChatWindow = ({ onBack }) => {
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}
         onClick={() => { showEmoji && setShowEmoji(false); showAttachMenu && setShowAttachMenu(false) }}>
         {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '14px' }}>Loading...</p>}
-        {!loading && chatMessages.length === 0 && pendingMessages.length === 0 && (
+        {!loading && chatMessages.length === 0 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: 0.6 }}>
             <p style={{ fontSize: '32px' }}>👋</p>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Say hello to {getChatName()}!</p>
@@ -290,13 +268,16 @@ const ChatWindow = ({ onBack }) => {
           <Message key={msg._id} message={msg}
             isOwn={msg.sender?._id === user?._id || msg.sender === user?._id}
             showAvatar={!activeChat?.isGroup ? false : idx === 0 || chatMessages[idx-1]?.sender?._id !== msg.sender?._id}
+            onReply={(m) => { setReplyTo(m); textareaRef.current?.focus() }}
+            onDelete={handleDeleteMessage}
+            onForward={handleForward}
           />
         ))}
         {pendingMessages.map(msg => (
           <div key={msg.id} style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ background: 'var(--sent-bubble)', borderRadius: '18px 18px 4px 18px', padding: '10px 14px', maxWidth: '65%', opacity: 0.6 }}>
               <p style={{ fontSize: '14px', color: '#fff' }}>{msg.content}</p>
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: '4px' }}>⏳ Queued</p>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: '4px' }}>⏳</p>
             </div>
           </div>
         ))}
@@ -308,99 +289,76 @@ const ChatWindow = ({ onBack }) => {
 
       {/* Attachment Menu */}
       {showAttachMenu && (
-        <div style={{
-          position: 'absolute', bottom: '70px', left: '16px',
-          background: 'var(--bg-secondary)', borderRadius: '16px',
-          border: '1px solid var(--border)', padding: '12px',
-          display: 'flex', gap: '16px', zIndex: 100,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-        }}>
-          {/* Camera - take photo */}
-          <div onClick={() => cameraInputRef.current?.click()}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <div style={{ background: '#7c3aed', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              📷
+        <div style={{ position: 'absolute', bottom: '70px', left: '16px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border)', padding: '12px', display: 'flex', gap: '16px', zIndex: 100, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+          {[
+            { ref: cameraInputRef, icon: '📷', label: 'Camera', accept: 'image/*', capture: 'environment' },
+            { ref: imageInputRef, icon: '🖼️', label: 'Gallery', accept: 'image/*' },
+            { ref: videoInputRef, icon: '🎥', label: 'Video', accept: 'video/*' },
+            { ref: fileInputRef, icon: '📄', label: 'File', accept: '.pdf,.doc,.docx,.txt,.zip' },
+          ].map((item, i) => (
+            <div key={i} onClick={() => item.ref.current?.click()}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <div style={{ background: ['#7c3aed','#059669','#dc2626','#2563eb'][i], width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+                {item.icon}
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.label}</span>
             </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Camera</span>
-          </div>
-
-          {/* Gallery - photos */}
-          <div onClick={() => imageInputRef.current?.click()}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <div style={{ background: '#059669', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🖼️
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Gallery</span>
-          </div>
-
-          {/* Video */}
-          <div onClick={() => videoInputRef.current?.click()}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <div style={{ background: '#dc2626', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              🎥
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Video</span>
-          </div>
-
-          {/* Document */}
-          <div onClick={() => fileInputRef.current?.click()}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <div style={{ background: '#2563eb', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
-              📄
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>File</span>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Hidden file inputs */}
+      {/* Hidden inputs */}
       <input type="file" ref={cameraInputRef} onChange={handleFileSelect} style={{ display: 'none' }} accept="image/*" capture="environment" />
       <input type="file" ref={imageInputRef} onChange={handleFileSelect} style={{ display: 'none' }} accept="image/*" />
       <input type="file" ref={videoInputRef} onChange={handleFileSelect} style={{ display: 'none' }} accept="video/*" />
       <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx" />
 
-      {/* Recording UI */}
+      {/* Reply Preview */}
+      {replyTo && (
+        <div style={{ padding: '8px 16px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ flex: 1, borderLeft: '3px solid var(--accent)', paddingLeft: '10px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}>{replyTo.sender?.displayName}</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {replyTo.content || '📎 Attachment'}
+            </p>
+          </div>
+          <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <FiX />
+          </button>
+        </div>
+      )}
+
+      {/* Recording */}
       {recording && (
         <div style={{ padding: '12px 16px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={cancelRecording} style={{ background: 'var(--danger)', border: 'none', color: '#fff', padding: '10px', borderRadius: '12px', fontSize: '18px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}><FiX /></button>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--danger)', animation: 'pulse 1s infinite' }} />
-            <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>🎤 Recording... {formatTime(recordingTime)}</p>
+            <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>🎤 {formatTime(recordingTime)}</p>
           </div>
-          <button onClick={stopRecording} style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '10px', borderRadius: '12px', fontSize: '18px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-            <MdStop />
-          </button>
+          <button onClick={stopRecording} style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '10px', borderRadius: '12px', fontSize: '18px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}><MdStop /></button>
         </div>
       )}
 
       {/* Input */}
       {!recording && (
         <div style={{ padding: '8px 12px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
-
-          {/* Attach button */}
-          <button
-            onClick={() => { setShowAttachMenu(!showAttachMenu); setShowEmoji(false) }}
+          <button onClick={() => { setShowAttachMenu(!showAttachMenu); setShowEmoji(false) }}
             style={{ background: showAttachMenu ? 'var(--accent)' : 'var(--bg-tertiary)', border: 'none', color: showAttachMenu ? '#fff' : 'var(--text-secondary)', padding: '10px', borderRadius: '50%', fontSize: '20px', display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}>
             <MdAttachFile />
           </button>
-
-          {/* Text input */}
           <div style={{ flex: 1, background: 'var(--bg-tertiary)', borderRadius: '24px', border: '1px solid var(--border)', padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
             <textarea ref={textareaRef} value={text} onChange={handleTyping} onKeyDown={handleKeyPress}
-              placeholder={isOnline ? "Type a message..." : "Offline - will queue..."}
-              rows={1}
+              placeholder={isOnline ? "Type a message..." : "Offline..."} rows={1}
               style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '15px', resize: 'none', maxHeight: '100px', lineHeight: '1.4', fontFamily: 'inherit' }}
             />
             <button onClick={() => { setShowEmoji(!showEmoji); setShowAttachMenu(false) }}
-              style={{ background: 'none', border: 'none', color: showEmoji ? 'var(--accent)' : 'var(--text-muted)', fontSize: '22px', display: 'flex', alignItems: 'center', cursor: 'pointer', padding: '0 0 0 8px' }}>
+              style={{ background: 'none', border: 'none', color: showEmoji ? 'var(--accent)' : 'var(--text-muted)', fontSize: '22px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <FiSmile />
             </button>
           </div>
-
-          {/* Send or mic */}
           {text.trim() ? (
-            <button onClick={handleSend}
-              style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '10px', borderRadius: '50%', fontSize: '20px', display: 'flex', alignItems: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(124,58,237,0.4)', cursor: 'pointer' }}>
+            <button onClick={handleSend} style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '10px', borderRadius: '50%', fontSize: '20px', display: 'flex', alignItems: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(124,58,237,0.4)', cursor: 'pointer' }}>
               <FiSend />
             </button>
           ) : (
