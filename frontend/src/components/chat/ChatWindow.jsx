@@ -261,7 +261,7 @@ const ChatWindow = ({ onBack }) => {
         )}
       </div>
 
-      {/* Messages */
+      {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}
         onClick={() => { showEmoji && setShowEmoji(false); showAttachMenu && setShowAttachMenu(false) }}>
         {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '14px' }}>Loading...</p>}
