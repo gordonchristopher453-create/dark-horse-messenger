@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
   refreshToken: String,
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   fcmToken: { type: String, default: '' },
+  publicKey: { type: String, default: '' },
   lastLoginIP: { type: String, default: '' },
   settings: {
     notifications: { type: Boolean, default: true },

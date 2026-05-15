@@ -11,7 +11,8 @@ const {
   updateSettings,
   blockUser,
   unblockUser,
-  updateFcmToken
+  updateFcmToken,
+  updatePublicKey
 } = require('../controllers/user.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { upload, processUpload } = require('../middleware/upload.middleware');
@@ -26,5 +27,6 @@ router.put('/settings', updateSettings);
 router.put('/fcm-token', updateFcmToken);
 router.post('/block/:id', blockUser);
 router.post('/unblock/:id', unblockUser);
+router.put('/public-key', updatePublicKey);
 
 module.exports = router;

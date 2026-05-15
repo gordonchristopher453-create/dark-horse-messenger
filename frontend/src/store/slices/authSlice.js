@@ -1,3 +1,4 @@
+import { generateKeyPair, exportPublicKey, storePrivateKey, hasStoredKey } from '../../services/crypto'
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
@@ -8,6 +9,11 @@ export const register = createAsyncThunk('auth/register', async (data, { rejectW
     const res = await api.post('/auth/register', data)
     localStorage.setItem('accessToken', res.data.data.accessToken)
     localStorage.setItem('refreshToken', res.data.data.refreshToken)
+    const userId = res.data.data.user._id
+    const keyPair = await generateKeyPair()
+    await storePrivateKey(userId, keyPair.privateKey, data.password)
+    const pubKey = await exportPublicKey(keyPair.publicKey)
+    await api.put('/users/public-key', { publicKey: pubKey })
     return res.data.data
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'Registration failed')
@@ -20,6 +26,13 @@ export const login = createAsyncThunk('auth/login', async (data, { rejectWithVal
     const res = await api.post('/auth/login', data)
     localStorage.setItem('accessToken', res.data.data.accessToken)
     localStorage.setItem('refreshToken', res.data.data.refreshToken)
+    const userId = res.data.data.user._id
+    if (!hasStoredKey(userId)) {
+      const keyPair = await generateKeyPair()
+      await storePrivateKey(userId, keyPair.privateKey, data.password)
+      const pubKey = await exportPublicKey(keyPair.publicKey)
+      await api.put('/users/public-key', { publicKey: pubKey })
+    }
     return res.data.data
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || 'Login failed')
@@ -46,6 +59,7 @@ export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValu
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
   }
+  // Note: private key stays in localStorage so user can re-login without regenerating
 })
 
 const authSlice = createSlice({

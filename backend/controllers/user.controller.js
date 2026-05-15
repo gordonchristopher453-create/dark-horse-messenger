@@ -120,7 +120,20 @@ const updateFcmToken = async (req, res) => {
   }
 };
 
+// Update public key for E2E encryption
+exports.updatePublicKey = async (req, res) => {
+  try {
+    const { publicKey } = req.body;
+    if (!publicKey) return res.status(400).json({ success: false, message: 'Public key required' });
+    await User.findByIdAndUpdate(req.user._id, { publicKey });
+    res.json({ success: true, message: 'Public key updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getUsers, getUserById, updateProfile,
   updateSettings, blockUser, unblockUser, updateFcmToken
+  updatePublicKey,
 };

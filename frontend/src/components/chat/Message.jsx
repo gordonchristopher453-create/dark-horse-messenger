@@ -1,4 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSelector } from 'react-redux'
+import { loadPrivateKey, decryptMessage, decryptGroupMessage } from '../../services/crypto'
 import { format } from 'date-fns'
 import Avatar from '../ui/Avatar'
 import { FiCheck, FiDownload, FiCornerUpRight, FiTrash2, FiCopy } from 'react-icons/fi'
@@ -73,7 +75,7 @@ const Message = ({ message, isOwn, showAvatar, onReply, onDelete, onForward }) =
     return (
       <div style={{ textAlign: 'center', margin: '8px 0' }}>
         <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 12px', borderRadius: '20px' }}>
-          {message.content}
+          {decryptedContent ?? message.content}
         </span>
       </div>
     )
