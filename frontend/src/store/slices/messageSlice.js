@@ -47,7 +47,17 @@ const messageSlice = createSlice({
         if (msg) { msg.isDeleted = true; msg.content = 'This message was deleted' }
       }
     },
-    clearMessages: (state, action) => { delete state.messages[action.payload] }
+    clearMessages: (state, action) => { delete state.messages[action.payload] },
+    markMessageRead: (state, action) => {
+      const { chatId, messageId, readBy, readAt } = action.payload
+      if (!state.messages[chatId]) return
+      const msg = state.messages[chatId].find(m => m._id === messageId)
+      if (msg) {
+        if (!msg.readBy) msg.readBy = []
+        const alreadyRead = msg.readBy.some(r => (r.user?._id || r.user) === readBy)
+        if (!alreadyRead) msg.readBy.push({ user: readBy, readAt })
+      }
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(fetchMessages.pending, (state) => { state.loading = true })
@@ -65,5 +75,5 @@ const messageSlice = createSlice({
   }
 })
 
-export const { addMessage, updateMessage, deleteMessage, clearMessages } = messageSlice.actions
+export const { addMessage, updateMessage, deleteMessage, clearMessages, markMessageRead } = messageSlice.actions
 export default messageSlice.reducer

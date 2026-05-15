@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchChats, updateChatLastMessage, addChat, setActiveChat } from '../store/slices/chatSlice'
 import { getSocket } from '../services/socket'
-import { addMessage, updateMessage } from '../store/slices/messageSlice'
+import { addMessage, updateMessage , markMessageRead } from '../store/slices/messageSlice'
 import { setTypingUser } from '../store/slices/uiSlice'
 import Sidebar from '../components/chat/Sidebar'
 import ChatWindow from '../components/chat/ChatWindow'
@@ -43,21 +43,10 @@ const ChatPage = () => {
       }
     })
 
-    // ✅ FIX — instantly update blue ticks when recipient reads
     socket.on('message:read', ({ chatId, messageIds, readBy, readAt }) => {
-      if (!messages[chatId]) return
       messageIds.forEach(messageId => {
-        const msg = messages[chatId]?.find(m => m._id === messageId)
-        if (msg) {
-          const updatedMsg = {
-            ...msg,
-            readBy: [...(msg.readBy || []), { user: readBy, readAt }]
-          }
-          dispatch(updateMessage({ chatId, message: updatedMsg }))
-        }
+        dispatch(markMessageRead({ chatId, messageId, readBy, readAt }))
       })
-      // Refresh chats to update unread count badge instantly
-      dispatch(fetchChats())
     })
 
     socket.on('typing:start', ({ userId, chatId }) => {
