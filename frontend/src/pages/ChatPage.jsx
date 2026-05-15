@@ -56,24 +56,29 @@ const ChatPage = () => {
 
   const handleBack = () => dispatch(setActiveChat(null))
 
-  // Mobile layout - show one screen at a time
+  // Mobile — show one screen at a time
   if (isMobile) {
     return (
-      <div style={{ height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-        {activeChat ? (
-          <ChatWindow onBack={handleBack} />
-        ) : (
-          <Sidebar />
-        )}
+      <div style={{ height: '100vh', width: '100vw', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+        {activeChat ? <ChatWindow onBack={handleBack} /> : <Sidebar />}
       </div>
     )
   }
 
-  // Desktop layout - side by side
+  // Desktop — sidebar + chat window filling full screen
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-      <Sidebar />
-      {activeChat ? <ChatWindow /> : <WelcomeScreen />}
+    <div style={{
+      display: 'flex', height: '100vh', width: '100vw',
+      background: 'var(--bg-primary)', overflow: 'hidden'
+    }}>
+      {/* Sidebar - fixed width */}
+      <div style={{ width: '340px', flexShrink: 0, height: '100vh' }}>
+        <Sidebar />
+      </div>
+      {/* Chat area - fills remaining space */}
+      <div style={{ flex: 1, height: '100vh', overflow: 'hidden' }}>
+        {activeChat ? <ChatWindow /> : <WelcomeScreen />}
+      </div>
     </div>
   )
 }

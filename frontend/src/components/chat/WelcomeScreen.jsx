@@ -1,6 +1,7 @@
 const WelcomeScreen = () => (
   <div style={{
-    flex: 1, display: 'flex', flexDirection: 'column',
+    flex: 1, width: '100%', height: '100%',
+    display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center',
     background: 'var(--bg-primary)', gap: '16px'
   }}>
