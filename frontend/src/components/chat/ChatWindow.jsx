@@ -206,7 +206,7 @@ const ChatWindow = ({ onBack }) => {
       {/* Input */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
         {showEmoji && (
-          <EmojiPicker onSelect={(emoji) => { setText(prev => prev + emoji); setShowEmoji(false) }} onClose={() => setShowEmoji(false)} />
+          <EmojiPicker onEmojiClick={(emoji) => { setText(prev => prev + emoji); setShowEmoji(false) }} onClose={() => setShowEmoji(false)} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={() => imageInputRef.current?.click()} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
