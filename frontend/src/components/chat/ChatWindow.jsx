@@ -110,7 +110,7 @@ const ChatWindow = ({ onBack }) => {
     try {
       const formData = new FormData()
       if (previewFile) {
-        formData.append('file', previewFile.file)
+        formData.append('media', previewFile.file)
         formData.append('type', previewFile.type)
         if (text.trim()) formData.append('content', text)
         setPreviewFile(null)
@@ -147,7 +147,7 @@ const ChatWindow = ({ onBack }) => {
         const blob = new Blob(chunks, { type: 'audio/webm' })
         const file = new File([blob], 'voice.webm', { type: 'audio/webm' })
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('media', file)
         formData.append('type', 'voice')
         stream.getTracks().forEach(t => t.stop())
         await dispatch(sendMessage({ chatId: activeChat._id, formData }))
