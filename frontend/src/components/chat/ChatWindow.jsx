@@ -12,7 +12,7 @@ import toast from 'react-hot-toast'
 const ChatWindow = ({ onBack }) => {
   const dispatch = useDispatch()
   const { activeChat } = useSelector(state => state.chat)
-  const { messages } = useSelector(state => state.messages)
+  const { messages } = useSelector(state => state.message)
   const { user } = useSelector(state => state.auth)
   const [text, setText] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
