@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchChats, updateChatLastMessage, addChat } from '../store/slices/chatSlice'
+import { fetchChats, updateChatLastMessage, addChat, setActiveChat } from '../store/slices/chatSlice'
 import { getSocket } from '../services/socket'
-import { addMessage } from '../store/slices/messageSlice'
+import { addMessage, updateMessage } from '../store/slices/messageSlice'
 import { setTypingUser } from '../store/slices/uiSlice'
-import { setActiveChat } from '../store/slices/chatSlice'
 import Sidebar from '../components/chat/Sidebar'
 import ChatWindow from '../components/chat/ChatWindow'
 import WelcomeScreen from '../components/chat/WelcomeScreen'
@@ -12,6 +11,8 @@ import WelcomeScreen from '../components/chat/WelcomeScreen'
 const ChatPage = () => {
   const dispatch = useDispatch()
   const { activeChat } = useSelector(state => state.chat)
+  const { user } = useSelector(state => state.auth)
+  const { messages } = useSelector(state => state.message)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
   useEffect(() => {
@@ -30,9 +31,32 @@ const ChatPage = () => {
     const socket = getSocket()
     if (!socket) return
 
+    // New message received
     socket.on('message:receive', ({ message, chatId }) => {
       dispatch(addMessage({ chatId, message }))
       dispatch(updateChatLastMessage({ chatId, message }))
+      dispatch(fetchChats())
+
+      // Auto mark as read if chat is open
+      if (activeChat?._id === chatId) {
+        socket.emit('message:read', { chatId, messageIds: [message._id] })
+      }
+    })
+
+    // ✅ FIX — instantly update blue ticks when recipient reads
+    socket.on('message:read', ({ chatId, messageIds, readBy, readAt }) => {
+      if (!messages[chatId]) return
+      messageIds.forEach(messageId => {
+        const msg = messages[chatId]?.find(m => m._id === messageId)
+        if (msg) {
+          const updatedMsg = {
+            ...msg,
+            readBy: [...(msg.readBy || []), { user: readBy, readAt }]
+          }
+          dispatch(updateMessage({ chatId, message: updatedMsg }))
+        }
+      })
+      // Refresh chats to update unread count badge instantly
       dispatch(fetchChats())
     })
 
@@ -46,39 +70,63 @@ const ChatPage = () => {
 
     socket.on('chat:new', (chat) => dispatch(addChat(chat)))
 
+    // ✅ FIX — update message when deleted by other person
+    socket.on('message:deleted', ({ messageId, chatId }) => {
+      const msg = messages[chatId]?.find(m => m._id === messageId)
+      if (msg) {
+        dispatch(updateMessage({
+          chatId,
+          message: { ...msg, isDeleted: true, content: 'This message was deleted' }
+        }))
+      }
+    })
+
     return () => {
       socket.off('message:receive')
+      socket.off('message:read')
       socket.off('typing:start')
       socket.off('typing:stop')
       socket.off('chat:new')
+      socket.off('message:deleted')
     }
-  }, [])
+  }, [activeChat, messages])
+
+  // ✅ FIX — mark messages as read instantly when opening a chat
+  useEffect(() => {
+    if (!activeChat?._id) return
+    const socket = getSocket()
+    if (!socket) return
+
+    const chatMessages = messages[activeChat._id] || []
+    const unreadIds = chatMessages
+      .filter(m => {
+        const isOwn = m.sender?._id === user?._id || m.sender === user?._id
+        const isRead = m.readBy?.some(r => r.user === user?._id || r.user?._id === user?._id)
+        return !isOwn && !isRead && !m.isDeleted
+      })
+      .map(m => m._id)
+
+    if (unreadIds.length > 0) {
+      socket.emit('message:read', { chatId: activeChat._id, messageIds: unreadIds })
+      // Refresh chats to clear unread badge immediately
+      dispatch(fetchChats())
+    }
+  }, [activeChat?._id])
 
   const handleBack = () => dispatch(setActiveChat(null))
 
-  // Mobile — show one screen at a time
   if (isMobile) {
     return (
-      <div style={{ height: '100vh', width: '100vw', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+      <div style={{ height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden' }}>
         {activeChat ? <ChatWindow onBack={handleBack} /> : <Sidebar />}
       </div>
     )
   }
 
-  // Desktop — sidebar + chat window filling full screen
   return (
-    <div style={{
-      display: 'flex', height: '100vh', width: '100vw',
-      background: 'var(--bg-primary)', overflow: 'hidden'
-    }}>
-      {/* Sidebar - fixed width */}
-      <div style={{ width: '340px', flexShrink: 0, height: '100vh' }}>
-        <Sidebar />
-      </div>
-      {/* Chat area - fills remaining space */}
-      <div style={{ flex: 1, height: '100vh', overflow: 'hidden' }}>
-        {activeChat ? <ChatWindow /> : <WelcomeScreen />}
-      </div>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+      <Sidebar />
+      {activeChat ? <ChatWindow onBack={handleBack} /> : <WelcomeScreen />}
     </div>
   )
 }
