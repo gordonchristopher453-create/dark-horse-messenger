@@ -12,7 +12,11 @@ export const fetchMessages = createAsyncThunk('message/fetchMessages', async ({ 
 
 export const sendMessage = createAsyncThunk('message/sendMessage', async ({ chatId, formData }, { rejectWithValue }) => {
   try {
-    const res = await api.post(`/messages/${chatId}`, formData)
+    const isFile = formData instanceof FormData
+    const res = await api.post(`/messages/${chatId}`, formData, {
+      timeout: isFile ? 60000 : 10000,
+      headers: isFile ? { 'Content-Type': 'multipart/form-data' } : {}
+    })
     return res.data.data.message
   } catch (err) {
     return rejectWithValue(err.response?.data?.message)
@@ -26,7 +30,6 @@ const messageSlice = createSlice({
     addMessage: (state, action) => {
       const { chatId, message } = action.payload
       if (!state.messages[chatId]) state.messages[chatId] = []
-      // Strict duplicate check by ID
       const exists = state.messages[chatId].find(m => m._id === message._id)
       if (!exists) state.messages[chatId].push(message)
     },
