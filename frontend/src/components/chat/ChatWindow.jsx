@@ -18,7 +18,6 @@ const ChatWindow = ({ onBack }) => {
   const [showEmoji, setShowEmoji] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
-  const [uploading, setUploading] = useState(false)
   const [previewFile, setPreviewFile] = useState(null)
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -38,7 +37,7 @@ const ChatWindow = ({ onBack }) => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [activeChat?._id])
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -162,9 +161,9 @@ const ChatWindow = ({ onBack }) => {
   if (!activeChat) return null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
       {/* Header */}
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
           <FiArrowLeft />
         </button>
@@ -179,7 +178,7 @@ const ChatWindow = ({ onBack }) => {
 
       {/* File Preview */}
       {previewFile && (
-        <div style={{ padding: '10px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ padding: '10px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           {previewFile.type === 'image' ? (
             <img src={previewFile.url} alt="preview" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
           ) : (
@@ -205,24 +204,21 @@ const ChatWindow = ({ onBack }) => {
       </div>
 
       {/* Input */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
         {showEmoji && (
           <EmojiPicker onSelect={(emoji) => { setText(prev => prev + emoji); setShowEmoji(false) }} onClose={() => setShowEmoji(false)} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Image attach */}
           <button onClick={() => imageInputRef.current?.click()} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <FiImage />
           </button>
           <input ref={imageInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={e => handleFileSelect(e, e.target.files[0]?.type.startsWith('image') ? 'image' : 'video')} />
 
-          {/* File attach */}
           <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <FiFile />
           </button>
           <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.zip,.rar" style={{ display: 'none' }} onChange={e => handleFileSelect(e, 'document')} />
 
-          {/* Text input */}
           <input
             value={text}
             onChange={handleTyping}
@@ -231,14 +227,12 @@ const ChatWindow = ({ onBack }) => {
             style={{ flex: 1, padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '24px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}
           />
 
-          {/* Emoji */}
           <button onClick={() => setShowEmoji(!showEmoji)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
             <FiSmile />
           </button>
 
-          {/* Send or Voice */}
           {text.trim() || previewFile ? (
-            <button onClick={handleSend} disabled={uploading} style={{ background: 'var(--accent)', border: 'none', color: '#fff', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px' }}>
+            <button onClick={handleSend} style={{ background: 'var(--accent)', border: 'none', color: '#fff', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '16px' }}>
               <FiSend />
             </button>
           ) : (
