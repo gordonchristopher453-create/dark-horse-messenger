@@ -42,6 +42,7 @@ const getUserChats = async (req, res) => {
       archivedBy: { $nin: [userId] }
     })
     .populate('members', 'username displayName avatar isOnline lastSeen status')
+    .populate('admins', 'username displayName avatar')
     .populate({ path: 'lastMessage', populate: { path: 'sender', select: 'username displayName avatar' } })
     .sort({ updatedAt: -1 });
 
@@ -71,6 +72,7 @@ const getChatById = async (req, res) => {
   try {
     const chat = await Chat.findOne({ _id: req.params.chatId, members: req.user._id })
       .populate('members', 'username displayName avatar isOnline lastSeen status')
+    .populate('admins', 'username displayName avatar')
       .populate('admins', 'username displayName avatar')
       .populate({ path: 'lastMessage', populate: { path: 'sender', select: 'username displayName avatar' } });
 

@@ -41,6 +41,8 @@ const ChatWindow = ({ onBack }) => {
   const audioChunksRef = useRef([])
   const textareaRef = useRef(null)
   const chatMessages = messages[activeChat?._id] || []
+
+  if (!activeChat) return null
   const typingInChat = typingUsers[activeChat?._id] || []
 
   useEffect(() => {

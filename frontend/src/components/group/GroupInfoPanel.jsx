@@ -20,6 +20,8 @@ const GroupInfoPanel = ({ onClose }) => {
   const [inviteLink, setInviteLink] = useState('')
   const [copied, setCopied] = useState(false)
 
+  const members = activeChat?.members || []
+  const admins = activeChat?.admins || []
   const isAdmin = activeChat?.admins?.includes(user?._id) ||
                   activeChat?.admins?.some(a => a._id === user?._id || a === user?._id)
 
@@ -28,7 +30,7 @@ const GroupInfoPanel = ({ onClose }) => {
     if (e.target.value.length < 2) return setSearchResults([])
     try {
       const res = await api.get(`/users?search=${e.target.value}`)
-      const existingIds = activeChat.members.map(m => m._id || m)
+      const existingIds = (activeChat.members || []).map(m => m._id || m)
       setSearchResults(res.data.data.users.filter(u => !existingIds.includes(u._id)))
     } catch { toast.error('Search failed') }
   }
