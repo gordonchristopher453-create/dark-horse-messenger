@@ -290,7 +290,7 @@ module.exports = {
   addMembers,
   removeMember,
   leaveGroup,
-  makeAdmin
+  makeAdmin,
   generateInviteLink,
   joinViaInvite,
 };
