@@ -7,7 +7,7 @@ import api from './services/api'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ChatPage from './pages/ChatPage'
-import JoinGroupPage from './pages/JoinGroupPage'
+
 import LoadingScreen from './components/ui/LoadingScreen'
 
 import toast from 'react-hot-toast'
