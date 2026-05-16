@@ -12,7 +12,7 @@ import GroupInfoPanel from '../group/GroupInfoPanel'
 import { MdMic, MdAttachFile, MdStop } from 'react-icons/md'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-import { loadPrivateKey, encryptForRecipient, encryptForGroup } from '../../services/crypto'
+// E2E encryption - disabled until key setup flow is complete
 
 const ChatWindow = ({ onBack }) => {
   const dispatch = useDispatch()
