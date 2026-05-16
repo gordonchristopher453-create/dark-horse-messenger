@@ -251,16 +251,8 @@ const makeAdmin = async (req, res) => {
   }
 };
 
-module.exports = {
-  createGroup,
-  updateGroup,
-  addMembers,
-  removeMember,
-  leaveGroup,
-  makeAdmin
-};
 
-exports.generateInviteLink = async (req, res) => {
+const generateInviteLink = async (req, res) => {
   try {
     const { groupId } = req.params;
     const group = await Chat.findOne({ _id: groupId, isGroup: true, members: req.user._id });
@@ -274,7 +266,7 @@ exports.generateInviteLink = async (req, res) => {
   }
 };
 
-exports.joinViaInvite = async (req, res) => {
+const joinViaInvite = async (req, res) => {
   try {
     const { inviteCode } = req.params;
     const group = await Chat.findOne({ inviteCode, isGroup: true });
@@ -291,3 +283,15 @@ exports.joinViaInvite = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+module.exports = {
+  createGroup,
+  updateGroup,
+  addMembers,
+  removeMember,
+  leaveGroup,
+  makeAdmin
+  generateInviteLink,
+  joinViaInvite,
+};
+
