@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setActiveChat } from '../../store/slices/chatSlice'
 import api from '../../services/api'
 import Avatar from '../ui/Avatar'
-import { FiX, FiSearch, FiUserPlus, FiLogOut, FiTrash2, FiEdit2, FiCheck, FiShield } from 'react-icons/fi'
+import { FiX, FiSearch, FiUserPlus, FiLogOut, FiTrash2, FiEdit2, FiCheck, FiShield, FiLink } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 
 const GroupInfoPanel = ({ onClose }) => {
@@ -17,6 +17,8 @@ const GroupInfoPanel = ({ onClose }) => {
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [loading, setLoading] = useState(false)
+  const [inviteLink, setInviteLink] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const isAdmin = activeChat?.admins?.includes(user?._id) ||
                   activeChat?.admins?.some(a => a._id === user?._id || a === user?._id)
@@ -25,7 +27,7 @@ const GroupInfoPanel = ({ onClose }) => {
     setSearch(e.target.value)
     if (e.target.value.length < 2) return setSearchResults([])
     try {
-      const res = await api.get(`/users/search?q=${e.target.value}`)
+      const res = await api.get(`/users?search=${e.target.value}`)
       const existingIds = activeChat.members.map(m => m._id || m)
       setSearchResults(res.data.data.users.filter(u => !existingIds.includes(u._id)))
     } catch { toast.error('Search failed') }
@@ -69,6 +71,17 @@ const GroupInfoPanel = ({ onClose }) => {
       setEditingName(false)
     } catch { toast.error('Failed to update name') }
     finally { setLoading(false) }
+  }
+
+  const handleGenerateInvite = async () => {
+    try {
+      const res = await api.post(`/groups/${activeChat._id}/invite`)
+      setInviteLink(res.data.data.inviteLink)
+      navigator.clipboard.writeText(res.data.data.inviteLink)
+      setCopied(true)
+      toast.success('Invite link copied!')
+      setTimeout(() => setCopied(false), 3000)
+    } catch { toast.error('Failed to generate invite link') }
   }
 
   const handleLeave = async () => {
@@ -299,7 +312,15 @@ const GroupInfoPanel = ({ onClose }) => {
 
           {/* Leave group */}
           <div style={{ padding: '0 20px 20px' }}>
-            <button onClick={handleLeave} style={{
+            <button onClick={handleGenerateInvite} style={{ width: '100%', padding: '12px', marginBottom: '8px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '12px', color: 'var(--accent-light)', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            {copied ? <><FiCheck /> Link Copied!</> : <><FiLink /> {inviteLink ? 'Copy Invite Link' : 'Generate Invite Link'}</>}
+          </button>
+          {inviteLink && (
+            <div style={{ background: 'var(--bg-tertiary)', borderRadius: '10px', padding: '10px 12px', marginBottom: '8px', wordBreak: 'break-all', fontSize: '12px', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              {inviteLink}
+            </div>
+          )}
+          <button onClick={handleLeave} style={{
               width: '100%', padding: '12px',
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
               borderRadius: '12px', color: 'var(--danger)',

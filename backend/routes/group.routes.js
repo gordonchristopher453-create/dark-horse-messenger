@@ -10,7 +10,9 @@ const {
   addMembers,
   removeMember,
   leaveGroup,
-  makeAdmin
+  makeAdmin,
+  generateInviteLink,
+  joinViaInvite
 } = require('../controllers/group.controller');
 const { protect } = require('../middleware/auth.middleware');
 const { upload, processUpload } = require('../middleware/upload.middleware');
@@ -25,5 +27,7 @@ router.post('/:groupId/members', addMembers);
 router.delete('/:groupId/members/:userId', removeMember);
 router.post('/:groupId/leave', leaveGroup);
 router.post('/:groupId/admin/:userId', makeAdmin);
+router.post('/join/:inviteCode', joinViaInvite);
+router.post('/:groupId/invite', generateInviteLink);
 
 module.exports = router;

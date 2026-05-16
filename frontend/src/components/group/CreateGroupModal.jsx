@@ -18,7 +18,7 @@ const CreateGroupModal = ({ onClose, onGroupCreated }) => {
     setSearch(e.target.value)
     if (e.target.value.length < 2) return setSearchResults([])
     try {
-      const res = await api.get(`/users/search?q=${e.target.value}`)
+      const res = await api.get(`/users?search=${e.target.value}`)
       setSearchResults(res.data.data.users.filter(u => u._id !== user._id))
     } catch { toast.error('Search failed') }
   }

@@ -259,3 +259,35 @@ module.exports = {
   leaveGroup,
   makeAdmin
 };
+
+exports.generateInviteLink = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const group = await Chat.findOne({ _id: groupId, isGroup: true, members: req.user._id });
+    if (!group) return res.status(404).json({ success: false, message: 'Group not found' });
+    const inviteCode = require('crypto').randomBytes(8).toString('hex');
+    group.inviteCode = inviteCode;
+    await group.save();
+    res.json({ success: true, data: { inviteCode, inviteLink: process.env.FRONTEND_URL + '/join/' + inviteCode } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.joinViaInvite = async (req, res) => {
+  try {
+    const { inviteCode } = req.params;
+    const group = await Chat.findOne({ inviteCode, isGroup: true });
+    if (!group) return res.status(404).json({ success: false, message: 'Invalid or expired invite link' });
+    if (group.members.includes(req.user._id)) {
+      const populated = await Chat.findById(group._id).populate('members', 'username displayName avatar isOnline publicKey').populate('lastMessage');
+      return res.json({ success: true, message: 'Already a member', data: { group: populated } });
+    }
+    group.members.push(req.user._id);
+    await group.save();
+    const populated = await Chat.findById(group._id).populate('members', 'username displayName avatar isOnline publicKey').populate('lastMessage');
+    res.json({ success: true, message: 'Joined group!', data: { group: populated } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
