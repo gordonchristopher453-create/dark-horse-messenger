@@ -134,6 +134,6 @@ exports.updatePublicKey = async (req, res) => {
 
 module.exports = {
   getUsers, getUserById, updateProfile,
-  updateSettings, blockUser, unblockUser, updateFcmToken
+  updateSettings, blockUser, unblockUser, updateFcmToken,
   updatePublicKey,
 };
