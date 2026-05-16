@@ -52,7 +52,12 @@ const chatSchema = new mongoose.Schema({
   pinnedMessages: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message'
-  }]
+  }],
+  inviteCode: {
+    type: String,
+    default: null,
+    sparse: true
+  }
 }, {
   timestamps: true
 });
