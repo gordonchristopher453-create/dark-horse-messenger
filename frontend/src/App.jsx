@@ -7,8 +7,9 @@ import api from './services/api'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ChatPage from './pages/ChatPage'
-import LoadingScreen from './components/ui/LoadingScreen'
 import JoinGroupPage from './pages/JoinGroupPage'
+import LoadingScreen from './components/ui/LoadingScreen'
+
 import toast from 'react-hot-toast'
 
 // PWA Install prompt
@@ -160,6 +161,7 @@ function App() {
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         <Route path="/join/:inviteCode" element={<JoinGroupPage />} />
+        <Route path="/join/:inviteCode" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
