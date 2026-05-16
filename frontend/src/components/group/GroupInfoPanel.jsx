@@ -32,9 +32,7 @@ const GroupInfoPanel = ({ onClose }) => {
       const users = res.data.data?.users || res.data.data || []
       const existingIds = members.map(m => (m._id || m).toString())
       setSearchResults(users.filter(u => !existingIds.includes(u._id.toString())))
-    } catch {
-      toast.error('Search failed')
-    }
+    } catch { toast.error('Search failed') }
   }
 
   const handleAddMember = async (member) => {
@@ -45,9 +43,7 @@ const GroupInfoPanel = ({ onClose }) => {
       setSearchResults([])
       setShowAddMembers(false)
       dispatch(setActiveChat({ ...activeChat, members: [...members, member] }))
-    } catch {
-      toast.error('Failed to add member')
-    }
+    } catch { toast.error('Failed to add member') }
   }
 
   const handleRemoveMember = async (memberId) => {
@@ -56,18 +52,14 @@ const GroupInfoPanel = ({ onClose }) => {
       await api.delete('/groups/' + activeChat._id + '/members/' + memberId)
       toast.success('Member removed')
       dispatch(setActiveChat({ ...activeChat, members: members.filter(m => (m._id || m).toString() !== memberId) }))
-    } catch {
-      toast.error('Failed to remove member')
-    }
+    } catch { toast.error('Failed to remove member') }
   }
 
   const handleMakeAdmin = async (memberId) => {
     try {
       await api.post('/groups/' + activeChat._id + '/admin/' + memberId)
       toast.success('Member promoted to admin')
-    } catch {
-      toast.error('Failed to promote member')
-    }
+    } catch { toast.error('Failed to promote member') }
   }
 
   const handleLeave = async () => {
@@ -77,9 +69,7 @@ const GroupInfoPanel = ({ onClose }) => {
       toast.success('Left group')
       dispatch(setActiveChat(null))
       onClose()
-    } catch {
-      toast.error('Failed to leave group')
-    }
+    } catch { toast.error('Failed to leave group') }
   }
 
   const handleGenerateLink = async () => {
@@ -92,11 +82,8 @@ const GroupInfoPanel = ({ onClose }) => {
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
       toast.success('Invite link copied!')
-    } catch {
-      toast.error('Failed to generate invite link')
-    } finally {
-      setLoading(false)
-    }
+    } catch { toast.error('Failed to generate invite link') }
+    finally { setLoading(false) }
   }
 
   return (
@@ -104,20 +91,15 @@ const GroupInfoPanel = ({ onClose }) => {
       <div style={{ width: '100%', maxWidth: '400px', maxHeight: '85vh', background: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <h3 style={{ fontWeight: 700, fontSize: '16px' }}>Group Info</h3>
-          <button onClick={onClose} style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}>
-            <FiX />
-          </button>
+          <button onClick={onClose} style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-secondary)', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}><FiX /></button>
         </div>
         <div style={{ overflowY: 'auto', flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
             <Avatar src={activeChat?.groupImage} name={activeChat?.groupName} size={70} />
             <p style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)' }}>{activeChat?.groupName}</p>
-            {activeChat?.groupDescription && (
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>{activeChat.groupDescription}</p>
-            )}
+            {activeChat?.groupDescription && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>{activeChat.groupDescription}</p>}
             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{members.length} member{members.length !== 1 ? 's' : ''}</p>
           </div>
-
           {isAdmin && (
             <button onClick={handleGenerateLink} disabled={loading}
               style={{ width: '100%', padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -125,7 +107,6 @@ const GroupInfoPanel = ({ onClose }) => {
               {copied ? 'Link Copied!' : loading ? 'Generating...' : 'Generate Invite Link'}
             </button>
           )}
-
           {isAdmin && (
             <div>
               <button onClick={() => setShowAddMembers(!showAddMembers)}
@@ -150,7 +131,6 @@ const GroupInfoPanel = ({ onClose }) => {
               )}
             </div>
           )}
-
           <div>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Members</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -162,25 +142,15 @@ const GroupInfoPanel = ({ onClose }) => {
                   <div key={memberId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '12px', background: 'var(--bg-tertiary)' }}>
                     <Avatar src={member.avatar} name={member.displayName} size={36} />
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                        {member.displayName || member.username} {isMe ? '(You)' : ''}
-                      </p>
-                      {memberIsAdmin && (
-                        <p style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>Admin</p>
-                      )}
+                      <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{member.displayName || member.username} {isMe ? '(You)' : ''}</p>
+                      {memberIsAdmin && <p style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>Admin</p>}
                     </div>
                     {isAdmin && !isMe && (
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {!memberIsAdmin && (
-                          <button onClick={() => handleMakeAdmin(memberId)}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center' }}>
-                            <FiShield />
-                          </button>
+                          <button onClick={() => handleMakeAdmin(memberId)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center' }}><FiShield /></button>
                         )}
-                        <button onClick={() => handleRemoveMember(memberId)}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center' }}>
-                          <FiTrash2 />
-                        </button>
+                        <button onClick={() => handleRemoveMember(memberId)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center' }}><FiTrash2 /></button>
                       </div>
                     )}
                   </div>
@@ -188,7 +158,6 @@ const GroupInfoPanel = ({ onClose }) => {
               })}
             </div>
           </div>
-
           <button onClick={handleLeave}
             style={{ width: '100%', padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', color: '#ef4444', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <FiLogOut /> Leave Group
