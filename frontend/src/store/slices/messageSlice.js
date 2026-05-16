@@ -63,9 +63,9 @@ const messageSlice = createSlice({
     builder.addCase(fetchMessages.pending, (state) => { state.loading = true })
     builder.addCase(fetchMessages.fulfilled, (state, action) => {
       state.loading = false
-      state.messages[action.payload.chatId] = action.payload.messages || []
+      state.messages[action.payload.chatId] = action.payload.messages
     })
-    builder.addCase(fetchMessages.rejected, (state, action) => { state.loading = false; console.error("fetchMessages failed:", action.payload) })
+    builder.addCase(fetchMessages.rejected, (state) => { state.loading = false })
     builder.addCase(sendMessage.fulfilled, (state, action) => {
       const msg = action.payload
       if (!state.messages[msg.chat]) state.messages[msg.chat] = []

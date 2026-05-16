@@ -6,13 +6,12 @@ import { getSocket } from '../../services/socket'
 import Avatar from '../ui/Avatar'
 import Message from './Message'
 import EmojiPicker from './EmojiPicker'
-import { FiSend, FiSmile, FiArrowLeft, FiX, FiLock, FiInfo } from 'react-icons/fi'
+import { FiSend, FiSmile, FiArrowLeft, FiX, FiInfo, FiLock } from 'react-icons/fi'
 import GroupInfoPanel from '../group/GroupInfoPanel'
-
 import { MdMic, MdAttachFile, MdStop } from 'react-icons/md'
 import api from '../../services/api'
 import toast from 'react-hot-toast'
-// E2E encryption - disabled until key setup flow is complete
+import { loadPrivateKey, encryptForRecipient, encryptForGroup } from '../../services/crypto'
 
 const ChatWindow = ({ onBack }) => {
   const dispatch = useDispatch()
@@ -42,8 +41,6 @@ const ChatWindow = ({ onBack }) => {
   const audioChunksRef = useRef([])
   const textareaRef = useRef(null)
   const chatMessages = messages[activeChat?._id] || []
-
-  if (!activeChat) return null
   const typingInChat = typingUsers[activeChat?._id] || []
 
   useEffect(() => {

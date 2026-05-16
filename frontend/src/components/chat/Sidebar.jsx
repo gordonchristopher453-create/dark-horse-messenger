@@ -5,7 +5,6 @@ import { logout } from '../../store/slices/authSlice'
 import { fetchMessages } from '../../store/slices/messageSlice'
 import { getSocket } from '../../services/socket'
 import Avatar from '../ui/Avatar'
-
 import CreateGroupModal from '../group/CreateGroupModal'
 import SearchUsers from './SearchUsers'
 import ProfileModal from '../profile/ProfileModal'

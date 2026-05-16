@@ -59,9 +59,6 @@ const ChatPage = () => {
 
     socket.on('chat:new', (chat) => dispatch(addChat(chat)))
 
-    // Join group socket room when active chat changes
-    if (activeChat?._id) socket.emit('chat:join', activeChat._id)
-
     // ✅ FIX — update message when deleted by other person
     socket.on('message:deleted', ({ messageId, chatId }) => {
       const msg = messages[chatId]?.find(m => m._id === messageId)
