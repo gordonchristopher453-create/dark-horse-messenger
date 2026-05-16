@@ -6,7 +6,7 @@ import { getSocket } from '../../services/socket'
 import Avatar from '../ui/Avatar'
 import Message from './Message'
 import EmojiPicker from './EmojiPicker'
-import { FiSend, FiSmile, FiArrowLeft, FiX, FiInfo } from 'react-icons/fi'
+import { FiSend, FiSmile, FiArrowLeft, FiX, FiInfo, FiLock } from 'react-icons/fi'
 import GroupInfoPanel from '../group/GroupInfoPanel'
 import { MdMic, MdAttachFile, MdStop } from 'react-icons/md'
 import api from '../../services/api'
@@ -251,7 +251,10 @@ const ChatWindow = ({ onBack }) => {
         {onBack && <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '22px', display: 'flex', alignItems: 'center', padding: '4px', cursor: 'pointer', flexShrink: 0 }}><FiArrowLeft /></button>}
         <Avatar src={getChatAvatar()} name={getChatName()} size={40} online={isOtherOnline()} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getChatName()}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <p style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getChatName()}</p>
+            <FiLock style={{ fontSize: '11px', color: '#10b981', flexShrink: 0 }} />
+          </div>
           <p style={{ fontSize: '12px', color: typingInChat.length > 0 ? 'var(--accent-light)' : isOtherOnline() ? 'var(--success)' : 'var(--text-muted)' }}>
             {typingInChat.length > 0 ? 'typing...' : activeChat && activeChat.isGroup ? (activeChat.members && activeChat.members.length || 0) + ' members' : isOtherOnline() ? 'Online' : 'Offline'}
           </p>
@@ -261,6 +264,19 @@ const ChatWindow = ({ onBack }) => {
             <FiInfo />
           </button>
         )}
+      </div>
+
+      {/* E2E Encryption Indicator */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: '5px', padding: '4px 0',
+        background: 'rgba(16,185,129,0.06)',
+        borderBottom: '1px solid rgba(16,185,129,0.1)'
+      }}>
+        <FiLock style={{ fontSize: '10px', color: '#10b981' }} />
+        <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 500 }}>
+          End-to-end encrypted
+        </span>
       </div>
 
       {/* Messages */}
